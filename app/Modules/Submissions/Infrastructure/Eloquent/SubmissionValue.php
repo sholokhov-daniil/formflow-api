@@ -6,12 +6,14 @@ namespace App\Modules\Submissions\Infrastructure\Eloquent;
 
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Form;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\FormField;
+
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
+ * @final
  * @property string               $id
  * @property string               $submission_id
  * @property string               $form_id
