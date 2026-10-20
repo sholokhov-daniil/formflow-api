@@ -2,4 +2,111 @@ openapi: 3.1.0
 info:
   title: FormFlow API
   version: 1.0.0
-paths: {}
+tags:
+  - name: Workspaces
+    description: Workspaces accessible to the authenticated user.
+paths:
+  /api/v1/workspaces:
+    get:
+      tags:
+        - Workspaces
+      operationId: listWorkspaces
+      summary: List accessible workspaces
+      description: |
+        Returns only workspaces where the authenticated user has a membership.
+        Personal and team workspaces are included. Results are ordered by name
+        and then by UUID, ascending, and are not paginated. Users without
+        memberships receive an empty data array.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: Accessible workspaces, including an empty list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceList'
+              examples:
+                workspaces:
+                  summary: Personal and team workspaces
+                  value:
+                    data:
+                      - id: 019a0000-0000-7000-8000-000000000001
+                        name: Alpha personal
+                        kind: personal
+                      - id: 019a0000-0000-7000-8000-000000000002
+                        name: Beta team
+                        kind: team
+                empty:
+                  summary: User without memberships
+                  value:
+                    data: []
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The viewAny authorization check denied the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Use the user's email as the username.
+  schemas:
+    Workspace:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    WorkspaceList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    Error:
+      type: object
+      description: Standard error response when application debug mode is disabled.
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string
