@@ -61,4 +61,16 @@ class WorkspaceRepository implements WorkspaceRepositoryInterface
             return $workspace;
         });
     }
+
+    /**
+     * Удаление пространства проектов
+     *
+     * @param Workspace $workspace
+     *
+     * @return void
+     */
+    public function delete(Workspace $workspace): void
+    {
+        $workspace->delete();
+    }
 }

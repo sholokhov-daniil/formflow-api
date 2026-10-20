@@ -260,6 +260,81 @@ paths:
               example:
                 message: Too many failed authentication attempts.
                 retry_after: 10800
+    delete:
+      tags:
+        - Workspaces
+      operationId: deleteWorkspace
+      summary: Delete a workspace
+      description: |
+        Deletes the workspace if the authenticated user is a member. Database
+        foreign keys cascade the deletion to its memberships, projects, forms,
+        form fields, submissions, and submission values.
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Workspace and its related records were deleted.
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
 components:
   securitySchemes:
     basicAuth:

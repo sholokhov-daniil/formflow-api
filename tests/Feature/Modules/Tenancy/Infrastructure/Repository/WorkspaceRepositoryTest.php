@@ -80,3 +80,13 @@ test('workspace creation rolls back when the creator membership cannot be persis
     $this->assertDatabaseCount('workspaces', 0);
     $this->assertDatabaseCount('workspace_memberships', 0);
 });
+
+test('deleting a workspace through the repository removes the workspace and its memberships', function () {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $workspace = $membership->workspace;
+
+    app(WorkspaceRepository::class)->delete($workspace);
+
+    $this->assertModelMissing($workspace);
+    $this->assertModelMissing($membership);
+});

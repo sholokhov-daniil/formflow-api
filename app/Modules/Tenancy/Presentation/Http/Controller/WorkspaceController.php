@@ -14,6 +14,7 @@ use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 /**
@@ -82,9 +83,16 @@ class WorkspaceController extends Controller
     }
 
     /**
-     * Заготовка удаления пространства
+     * Удаление пространства проектов
+     *
+     * @param Workspace                    $workspace
+     * @param WorkspaceRepositoryInterface $repository
+     *
+     * @return Response
      */
-    public function destroy()
+    public function destroy(Workspace $workspace, WorkspaceRepositoryInterface $repository): Response
     {
+        $repository->delete($workspace);
+        return response()->noContent();
     }
 }

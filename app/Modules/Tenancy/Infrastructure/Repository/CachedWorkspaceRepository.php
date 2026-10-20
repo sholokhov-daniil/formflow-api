@@ -66,6 +66,18 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
     }
 
     /**
+     * Удаление пространства проектов
+     *
+     * @param Workspace $workspace
+     *
+     * @return void
+     */
+    public function delete(Workspace $workspace): void
+    {
+        $this->repository->delete($workspace);
+    }
+
+    /**
      * Возвращает ключ версии кеша пользователя
      *
      * @param int $userId

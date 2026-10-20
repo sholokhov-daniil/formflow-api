@@ -1,6 +1,11 @@
 <?php
 
 use App\Modules\Identity\Infrastructure\Eloquent\User;
+use Database\Factories\FormFactory;
+use Database\Factories\FormFieldFactory;
+use Database\Factories\ProjectFactory;
+use Database\Factories\SubmissionFactory;
+use Database\Factories\SubmissionValueFactory;
 use Database\Factories\UserFactory;
 use Database\Factories\WorkspaceFactory;
 use Database\Factories\WorkspaceMembershipFactory;
@@ -244,4 +249,71 @@ test('workspace details return 429 after three failed authentication attempts', 
             'message' => 'Too many failed authentication attempts.',
             'retry_after' => 10800,
         ]);
+});
+
+test('workspace deletion returns 204 and cascades through workspace data', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $anotherMember = UserFactory::new()->create();
+    $workspace = WorkspaceFactory::new()->create();
+    $membership = WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+    $anotherMembership = WorkspaceMembershipFactory::new()->for($anotherMember)->for($workspace)->create();
+    $project = ProjectFactory::new()->create(['workspace_id' => $workspace->id]);
+    $form = FormFactory::new()->create([
+        'project_id' => $project->id,
+        'created_by' => $user->id,
+    ]);
+    $field = FormFieldFactory::new()->create(['form_id' => $form->id]);
+    $submission = SubmissionFactory::new()->create(['form_id' => $form->id]);
+    $submissionValue = SubmissionValueFactory::new()
+        ->forSubmission($submission)
+        ->create(['form_field_id' => $field->id]);
+    $this->withBasicAuth($user->email, 'correct-password')
+        ->getJson('/api/v1/workspaces')
+        ->assertJsonPath('data.0.id', $workspace->id);
+
+    $response = $this->deleteJson('/api/v1/workspaces/'.$workspace->id);
+
+    $response->assertNoContent();
+    $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
+    $this->assertDatabaseMissing('workspace_memberships', ['id' => $membership->id]);
+    $this->assertDatabaseMissing('workspace_memberships', ['id' => $anotherMembership->id]);
+    $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+    $this->assertDatabaseMissing('forms', ['id' => $form->id]);
+    $this->assertDatabaseMissing('form_fields', ['id' => $field->id]);
+    $this->assertDatabaseMissing('submissions', ['id' => $submission->id]);
+    $this->assertDatabaseMissing('submission_values', ['id' => $submissionValue->id]);
+    $this->assertModelExists($user);
+    $this->assertModelExists($anotherMember);
+
+    $this->getJson('/api/v1/workspaces')->assertOk()->assertExactJson(['data' => []]);
+});
+
+test('workspace deletion returns 401 without Basic credentials', function () {
+    $workspace = WorkspaceFactory::new()->create();
+
+    $response = $this->deleteJson('/api/v1/workspaces/'.$workspace->id);
+
+    $response->assertUnauthorized()->assertExactJson(['message' => 'Invalid credentials.']);
+    $this->assertModelExists($workspace);
+});
+
+test('workspace deletion returns 403 for a non-member and leaves the workspace intact', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create();
+    WorkspaceMembershipFactory::new()->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->deleteJson('/api/v1/workspaces/'.$workspace->id);
+
+    $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
+    $this->assertModelExists($workspace);
+});
+
+test('workspace deletion returns 404 for an unknown workspace UUID', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->deleteJson('/api/v1/workspaces/019a0000-0000-7000-8000-000000000099');
+
+    $response->assertNotFound()->assertExactJson(['message' => 'The route or resource was not found.']);
 });

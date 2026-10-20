@@ -30,4 +30,13 @@ interface WorkspaceRepositoryInterface
      * @return Workspace
      */
     public function createForUser(CreateWorkspaceData $data, int $userId): Workspace;
+
+    /**
+     * Удаление пространства
+     *
+     * @param Workspace $workspace
+     *
+     * @return void
+     */
+    public function delete(Workspace $workspace): void;
 }
