@@ -6,6 +6,7 @@ namespace App\Modules\Tenancy\Infrastructure\Repository;
 
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
 use App\Modules\Tenancy\Application\DTO\CreateWorkspaceData;
+use App\Modules\Tenancy\Application\DTO\UpdateWorkspaceData;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -75,6 +76,14 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
     public function delete(Workspace $workspace): void
     {
         $this->repository->delete($workspace);
+    }
+
+    /**
+     * Обновление пространства проектов
+     */
+    public function update(Workspace $workspace, UpdateWorkspaceData $data): Workspace
+    {
+        return $this->repository->update($workspace, $data);
     }
 
     /**

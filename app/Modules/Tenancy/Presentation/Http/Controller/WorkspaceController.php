@@ -8,6 +8,7 @@ use App\Modules\Identity\Infrastructure\Eloquent\User;
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 use App\Modules\Tenancy\Presentation\Http\Requests\StoreWorkspaceRequest;
+use App\Modules\Tenancy\Presentation\Http\Requests\UpdateWorkspaceRequest;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceDetailResource;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
 
@@ -76,10 +77,21 @@ class WorkspaceController extends Controller
     }
 
     /**
-     * Заготовка изменения пространства
+     * Изменения пространства проектов
+     *
+     * @param UpdateWorkspaceRequest       $request
+     * @param Workspace                    $workspace
+     * @param WorkspaceRepositoryInterface $repository
+     *
+     * @return WorkspaceDetailResource
      */
-    public function update()
-    {
+    public function update(
+        UpdateWorkspaceRequest $request,
+        Workspace $workspace,
+        WorkspaceRepositoryInterface $repository
+    ): WorkspaceDetailResource {
+        $workspace = $repository->update($workspace, $request->toData());
+        return new WorkspaceDetailResource($workspace);
     }
 
     /**

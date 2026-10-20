@@ -2,6 +2,7 @@
 
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
 use App\Modules\Tenancy\Application\DTO\CreateWorkspaceData;
+use App\Modules\Tenancy\Application\DTO\UpdateWorkspaceData;
 use App\Modules\Tenancy\Domain\Workspace\WorkspaceKind;
 use App\Modules\Tenancy\Infrastructure\Repository\WorkspaceRepository;
 use Database\Factories\UserFactory;
@@ -80,6 +81,26 @@ test('workspace creation rolls back when the creator membership cannot be persis
     $this->assertDatabaseCount('workspaces', 0);
     $this->assertDatabaseCount('workspace_memberships', 0);
 });
+
+test('updating a workspace persists only properties present in the update data', function (UpdateWorkspaceData $data, string $expectedName, string $expectedKind) {
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+
+    $updatedWorkspace = app(WorkspaceRepository::class)->update($workspace, $data);
+
+    expect($updatedWorkspace->name)->toBe($expectedName);
+    expect($updatedWorkspace->kind)->toBe($expectedKind);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => $expectedName,
+        'kind' => $expectedKind,
+    ]);
+})->with([
+    'name only' => [new UpdateWorkspaceData(name: 'Renamed workspace'), 'Renamed workspace', 'team'],
+    'kind only' => [new UpdateWorkspaceData(kind: WorkspaceKind::Personal), 'Original workspace', 'personal'],
+]);
 
 test('deleting a workspace through the repository removes the workspace and its memberships', function () {
     $membership = WorkspaceMembershipFactory::new()->create();

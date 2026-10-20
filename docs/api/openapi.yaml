@@ -260,6 +260,219 @@ paths:
               example:
                 message: Too many failed authentication attempts.
                 retry_after: 10800
+    put:
+      tags:
+        - Workspaces
+      operationId: replaceWorkspace
+      summary: Replace workspace details
+      description: |
+        Replaces the workspace's editable properties. Both name and kind are
+        required. Values must be sent in a JSON request body; query parameters
+        and form data are ignored. The authenticated user must be a workspace
+        member.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceWorkspaceRequest'
+            example:
+              name: Product team
+              kind: team
+      responses:
+        '200':
+          description: Workspace updated. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '422':
+          description: The JSON request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: The name field is required.
+                errors:
+                  name:
+                    - The name field is required.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+    patch:
+      tags:
+        - Workspaces
+      operationId: patchWorkspace
+      summary: Partially update workspace details
+      description: |
+        Updates one or more editable workspace properties. At least one of name
+        or kind is required. Values must be sent in a JSON request body; query
+        parameters and form data are ignored. The authenticated user must be a
+        workspace member.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWorkspaceRequest'
+            example:
+              name: Product team
+      responses:
+        '200':
+          description: Workspace updated. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '422':
+          description: The JSON request body failed validation, or no editable property was provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: Provide at least one field to update.
+                errors:
+                  name:
+                    - Provide at least one field to update.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
     delete:
       tags:
         - Workspaces
@@ -348,6 +561,36 @@ components:
       required:
         - name
         - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    ReplaceWorkspaceRequest:
+      type: object
+      required:
+        - name
+        - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    PatchWorkspaceRequest:
+      type: object
+      anyOf:
+        - required:
+            - name
+        - required:
+            - kind
       properties:
         name:
           type: string

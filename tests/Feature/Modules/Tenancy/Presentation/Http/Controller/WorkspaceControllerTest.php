@@ -251,6 +251,241 @@ test('workspace details return 429 after three failed authentication attempts', 
         ]);
 });
 
+test('workspace update with PUT replaces editable properties and returns details', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->personal()->create(['name' => 'Personal space']);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->putJson('/api/v1/workspaces/'.$workspace->id, [
+            'name' => 'Product team',
+            'kind' => 'team',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonStructure([
+            'data' => [
+                'id',
+                'name',
+                'kind',
+                'created_at',
+                'updated_at',
+            ],
+        ])
+        ->assertJsonPath('data.id', $workspace->id)
+        ->assertJsonPath('data.name', 'Product team')
+        ->assertJsonPath('data.kind', 'team');
+
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Product team',
+        'kind' => 'team',
+    ]);
+});
+
+test('workspace update with PATCH changes only the supplied properties', function (array $payload, string $expectedName, string $expectedKind) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/'.$workspace->id, $payload);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.name', $expectedName)
+        ->assertJsonPath('data.kind', $expectedKind);
+
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => $expectedName,
+        'kind' => $expectedKind,
+    ]);
+})->with([
+    'name only' => [['name' => 'Renamed workspace'], 'Renamed workspace', 'team'],
+    'kind only' => [['kind' => 'personal'], 'Original workspace', 'personal'],
+    'both properties' => [['name' => 'Personal space', 'kind' => 'personal'], 'Personal space', 'personal'],
+    'unrecognized properties are ignored' => [
+        ['name' => 'Renamed workspace', 'id' => '019a0000-0000-7000-8000-000000000099'],
+        'Renamed workspace',
+        'team',
+    ],
+]);
+
+test('workspace update invalidates the cached workspace list', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create(['name' => 'Original workspace']);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $this->withBasicAuth($user->email, 'correct-password')
+        ->getJson('/api/v1/workspaces')
+        ->assertJsonPath('data.0.name', 'Original workspace');
+
+    $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/'.$workspace->id, ['name' => 'Renamed workspace'])
+        ->assertOk();
+
+    $this->withBasicAuth($user->email, 'correct-password')
+        ->getJson('/api/v1/workspaces')
+        ->assertOk()
+        ->assertJsonPath('data.0.name', 'Renamed workspace');
+});
+
+test('workspace update with PUT returns 422 when a required property is missing', function (array $payload, array $invalidFields) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->putJson('/api/v1/workspaces/'.$workspace->id, $payload);
+
+    $response->assertUnprocessable()->assertInvalid($invalidFields);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+})->with([
+    'both properties are missing' => [[], ['name', 'kind']],
+    'name is missing' => [['kind' => 'personal'], ['name']],
+    'kind is missing' => [['name' => 'Renamed workspace'], ['kind']],
+]);
+
+test('workspace update with PATCH returns 422 for invalid properties', function (array $payload, array $invalidFields) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/'.$workspace->id, $payload);
+
+    $response->assertUnprocessable()->assertInvalid($invalidFields);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+})->with([
+    'name is not a string' => [['name' => 123], ['name']],
+    'name is too long' => [['name' => str_repeat('a', 256)], ['name']],
+    'name is empty' => [['name' => ''], ['name']],
+    'name is null' => [['name' => null], ['name']],
+    'kind is unsupported' => [['kind' => 'enterprise'], ['kind']],
+    'kind is null' => [['kind' => null], ['kind']],
+]);
+
+test('workspace update with an empty PATCH body returns 422 and leaves the workspace unchanged', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/'.$workspace->id, []);
+
+    $response
+        ->assertUnprocessable()
+        ->assertInvalid(['name' => 'Provide at least one field to update.']);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+});
+
+test('workspace update ignores query parameters when fields are not in the JSON body', function (string $method, array $invalidFields) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->json(
+        $method,
+        '/api/v1/workspaces/'.$workspace->id.'?name=Query+name&kind=personal',
+        [],
+    );
+
+    $response->assertUnprocessable()->assertInvalid($invalidFields);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+        'kind' => 'team',
+    ]);
+})->with([
+    'PATCH requires at least one body property' => ['PATCH', ['name' => 'Provide at least one field to update.']],
+    'PUT requires both body properties' => ['PUT', ['name', 'kind']],
+]);
+
+test('workspace update with form data returns 422 and leaves the workspace unchanged', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create(['name' => 'Original workspace']);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->patch(
+        '/api/v1/workspaces/'.$workspace->id,
+        ['name' => 'Form data name'],
+        ['Accept' => 'application/json', 'Content-Type' => 'application/x-www-form-urlencoded'],
+    );
+
+    $response
+        ->assertUnprocessable()
+        ->assertInvalid(['name' => 'Provide at least one field to update.']);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+    ]);
+});
+
+test('workspace update returns 401 without Basic credentials', function () {
+    $workspace = WorkspaceFactory::new()->create();
+
+    $response = $this->patchJson('/api/v1/workspaces/'.$workspace->id, ['name' => 'Renamed workspace']);
+
+    $response->assertUnauthorized()->assertExactJson(['message' => 'Invalid credentials.']);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => $workspace->name,
+    ]);
+});
+
+test('workspace update returns 403 for a non-member and leaves the workspace unchanged', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create(['name' => 'Original workspace']);
+    WorkspaceMembershipFactory::new()->for($workspace)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/'.$workspace->id, ['name' => 'Renamed workspace']);
+
+    $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'name' => 'Original workspace',
+    ]);
+});
+
+test('workspace update returns 404 for an unknown workspace UUID', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->patchJson('/api/v1/workspaces/019a0000-0000-7000-8000-000000000099', ['name' => 'Renamed workspace']);
+
+    $response->assertNotFound()->assertExactJson(['message' => 'The route or resource was not found.']);
+});
+
 test('workspace deletion returns 204 and cascades through workspace data', function () {
     $user = UserFactory::new()->create(['password' => 'correct-password']);
     $anotherMember = UserFactory::new()->create();

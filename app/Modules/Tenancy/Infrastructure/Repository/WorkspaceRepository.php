@@ -6,6 +6,7 @@ namespace App\Modules\Tenancy\Infrastructure\Repository;
 
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
 use App\Modules\Tenancy\Application\DTO\CreateWorkspaceData;
+use App\Modules\Tenancy\Application\DTO\UpdateWorkspaceData;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 use App\Modules\Tenancy\Infrastructure\Eloquent\WorkspaceMembership;
 use Illuminate\Support\Collection;
@@ -72,5 +73,23 @@ class WorkspaceRepository implements WorkspaceRepositoryInterface
     public function delete(Workspace $workspace): void
     {
         $workspace->delete();
+    }
+
+    /**
+     * Обновление пространства проектов
+     */
+    public function update(Workspace $workspace, UpdateWorkspaceData $data): Workspace
+    {
+        if ($data->name !== null) {
+            $workspace->name = $data->name;
+        }
+
+        if ($data->kind !== null) {
+            $workspace->kind = $data->kind->value;
+        }
+
+        $workspace->save();
+
+        return $workspace;
     }
 }
