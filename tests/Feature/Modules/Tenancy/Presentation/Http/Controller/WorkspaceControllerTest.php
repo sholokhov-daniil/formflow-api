@@ -74,3 +74,95 @@ test('the workspace list returns 403 when the viewAny ability is denied', functi
 
     $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
 });
+
+test('workspace details return 401 JSON without Basic credentials even when HTML is requested', function () {
+    $workspace = WorkspaceFactory::new()->create();
+
+    $response = $this->get('/api/v1/workspaces/'.$workspace->id, ['Accept' => 'text/html']);
+
+    $response
+        ->assertUnauthorized()
+        ->assertHeader('Content-Type', 'application/json')
+        ->assertHeader('WWW-Authenticate', 'Basic')
+        ->assertExactJson(['message' => 'Invalid credentials.']);
+});
+
+test('workspace details return 401 for invalid Basic credentials', function (string $email, string $password) {
+    $user = UserFactory::new()->create([
+        'email' => 'member@example.test',
+        'password' => 'correct-password',
+    ]);
+    $workspace = WorkspaceFactory::new()->create();
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+
+    $response = $this->withBasicAuth($email, $password)->getJson('/api/v1/workspaces/'.$workspace->id);
+
+    $response
+        ->assertUnauthorized()
+        ->assertHeader('WWW-Authenticate', 'Basic')
+        ->assertExactJson(['message' => 'Invalid credentials.']);
+})->with([
+    'unknown email' => ['unknown@example.test', 'correct-password'],
+    'incorrect password' => ['member@example.test', 'incorrect-password'],
+]);
+
+test('workspace details return the requested workspace and timestamps for a member', function (string $kind) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    $workspace = WorkspaceFactory::new()->create([
+        'name' => 'Product workspace',
+        'kind' => $kind,
+        'created_at' => '2026-10-19 10:00:00',
+        'updated_at' => '2026-10-20 12:30:00',
+    ]);
+    WorkspaceMembershipFactory::new()->for($user)->for($workspace)->create();
+    WorkspaceMembershipFactory::new()->for($user)->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->getJson('/api/v1/workspaces/'.$workspace->id);
+
+    $response->assertOk()->assertExactJson([
+        'data' => [
+            'id' => $workspace->id,
+            'name' => 'Product workspace',
+            'kind' => $kind,
+            'created_at' => '2026-10-19T10:00:00.000000Z',
+            'updated_at' => '2026-10-20T12:30:00.000000Z',
+        ],
+    ]);
+})->with(['personal', 'team']);
+
+test('workspace details return 403 for a member of another workspace', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    WorkspaceMembershipFactory::new()->for($user)->create();
+    $membership = WorkspaceMembershipFactory::new()->create();
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->getJson('/api/v1/workspaces/'.$membership->workspace_id);
+
+    $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
+});
+
+test('workspace details return 404 for an unknown workspace UUID', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->getJson('/api/v1/workspaces/019a0000-0000-7000-8000-000000000099');
+
+    $response->assertNotFound()->assertExactJson(['message' => 'The route or resource was not found.']);
+});
+
+test('workspace details return 429 after three failed authentication attempts', function () {
+    $this->freezeTime();
+    $workspace = WorkspaceFactory::new()->create();
+    $path = '/api/v1/workspaces/'.$workspace->id;
+    $this->getJson($path)->assertUnauthorized();
+    $this->getJson($path)->assertUnauthorized();
+
+    $response = $this->getJson($path);
+
+    $response
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After', '10800')
+        ->assertExactJson([
+            'message' => 'Too many failed authentication attempts.',
+            'retry_after' => 10800,
+        ]);
+});

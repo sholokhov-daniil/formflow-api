@@ -90,6 +90,88 @@ paths:
               example:
                 message: Too many failed authentication attempts.
                 retry_after: 10800
+  /api/v1/workspaces/{workspace}:
+    get:
+      tags:
+        - Workspaces
+      operationId: showWorkspace
+      summary: Get workspace details
+      description: |
+        Returns detailed information about a workspace, including creation and
+        update timestamps. The authenticated user must be a workspace member.
+        Authentication and failed-attempt limits are the same as for the
+        workspace list endpoint.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workspace details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Alpha personal
+                  kind: personal
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
 components:
   securitySchemes:
     basicAuth:
@@ -115,6 +197,40 @@ components:
           enum:
             - personal
             - team
+    WorkspaceDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+        created_at:
+          type: [string, "null"]
+          format: date-time
+        updated_at:
+          type: [string, "null"]
+          format: date-time
+    WorkspaceDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkspaceDetail'
     WorkspaceList:
       type: object
       additionalProperties: false

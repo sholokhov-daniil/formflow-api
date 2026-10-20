@@ -17,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $id
  * @property int $user_id
  * @property string $workspace_id
- * @property DateTime $created_at
- * @property DateTime $updated_at
+ * @property DateTime|null $created_at
+ * @property DateTime|null $updated_at
  */
 #[Fillable(['user_id', 'workspace_id', 'created_at', 'updated_at'])]
 final class WorkspaceMembership extends Model
@@ -34,8 +34,6 @@ final class WorkspaceMembership extends Model
 
     /**
      * Возвращает пользователя
-     *
-     * @return BelongsTo
      */
     public function user(): BelongsTo
     {
@@ -44,8 +42,6 @@ final class WorkspaceMembership extends Model
 
     /**
      * Возвращает пространство проектов
-     *
-     * @return BelongsTo
      */
     public function workspace(): BelongsTo
     {

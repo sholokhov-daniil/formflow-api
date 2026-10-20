@@ -6,8 +6,9 @@ namespace App\Modules\Tenancy\Presentation\Http\Controller;
 
 use App\Modules\Identity\Infrastructure\Eloquent\User;
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
+use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
+use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceDetailResource;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
-
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
@@ -19,11 +20,6 @@ class WorkspaceController extends Controller
 {
     /**
      * Возвращает доступные пространства текущего пользователя
-     *
-     * @param User                         $user
-     * @param WorkspaceRepositoryInterface $workspaces
-     *
-     * @return AnonymousResourceCollection
      */
     public function index(
         #[CurrentUser] User $user,
@@ -40,9 +36,16 @@ class WorkspaceController extends Controller
     public function store() {}
 
     /**
-     * Заготовка просмотра пространства
+     * Детальная информация по пространству
+     *
+     * @param Workspace $workspace
+     *
+     * @return WorkspaceDetailResource
      */
-    public function show() {}
+    public function show(Workspace $workspace): WorkspaceDetailResource
+    {
+        return new WorkspaceDetailResource($workspace);
+    }
 
     /**
      * Заготовка изменения пространства
