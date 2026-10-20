@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Application\Contracts\Repository;
 
+use App\Modules\Tenancy\Application\DTO\CreateWorkspaceData;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
+
 use Illuminate\Support\Collection;
 
 /**
@@ -18,4 +20,14 @@ interface WorkspaceRepositoryInterface
      * @return Collection<int, Workspace>
      */
     public function accessibleToUser(int $userId): Collection;
+
+    /**
+     * Создание пространства на основе пользователя
+     *
+     * @param CreateWorkspaceData $data
+     * @param int                 $userId
+     *
+     * @return Workspace
+     */
+    public function createForUser(CreateWorkspaceData $data, int $userId): Workspace;
 }

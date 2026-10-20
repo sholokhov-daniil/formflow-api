@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tenancy\Infrastructure\Repository;
 
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
+use App\Modules\Tenancy\Application\DTO\CreateWorkspaceData;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -49,6 +50,19 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
         );
 
         return Workspace::query()->hydrate($rows);
+    }
+
+    /**
+     * Создание нового пространства на основе пользователя
+     *
+     * @param CreateWorkspaceData $data
+     * @param int                 $userId
+     *
+     * @return Workspace
+     */
+    public function createForUser(CreateWorkspaceData $data, int $userId): Workspace
+    {
+        return $this->repository->createForUser($data, $userId);
     }
 
     /**

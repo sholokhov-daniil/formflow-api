@@ -75,6 +75,85 @@ test('the workspace list returns 403 when the viewAny ability is denied', functi
     $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
 });
 
+test('workspace creation returns the detailed resource and creates membership for its creator', function (string $kind) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->postJson('/api/v1/workspaces', [
+        'name' => 'Product team',
+        'kind' => $kind,
+    ]);
+
+    $response
+        ->assertCreated()
+        ->assertJsonStructure([
+            'data' => [
+                'id',
+                'name',
+                'kind',
+                'created_at',
+                'updated_at',
+            ],
+        ])
+        ->assertJsonPath('data.name', 'Product team')
+        ->assertJsonPath('data.kind', $kind);
+
+    $workspaceId = $response->json('data.id');
+
+    expect($workspaceId)->toBeUuid();
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspaceId,
+        'name' => 'Product team',
+        'kind' => $kind,
+    ]);
+    $this->assertDatabaseHas('workspace_memberships', [
+        'workspace_id' => $workspaceId,
+        'user_id' => $user->id,
+    ]);
+})->with(['personal', 'team']);
+
+test('workspace creation returns 401 without Basic credentials', function () {
+    $response = $this->postJson('/api/v1/workspaces', [
+        'name' => 'Product team',
+        'kind' => 'team',
+    ]);
+
+    $response->assertUnauthorized()->assertExactJson(['message' => 'Invalid credentials.']);
+    $this->assertDatabaseCount('workspaces', 0);
+    $this->assertDatabaseCount('workspace_memberships', 0);
+});
+
+test('workspace creation returns 403 when the create ability is denied', function () {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+    Gate::before(fn (User $user, string $ability): ?bool => $ability === 'create' ? false : null);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')->postJson('/api/v1/workspaces', [
+        'name' => 'Product team',
+        'kind' => 'team',
+    ]);
+
+    $response->assertForbidden()->assertExactJson(['message' => 'This action is unauthorized.']);
+    $this->assertDatabaseCount('workspaces', 0);
+    $this->assertDatabaseCount('workspace_memberships', 0);
+});
+
+test('workspace creation returns 422 for invalid input', function (array $payload, array $invalidFields) {
+    $user = UserFactory::new()->create(['password' => 'correct-password']);
+
+    $response = $this->withBasicAuth($user->email, 'correct-password')
+        ->postJson('/api/v1/workspaces', $payload);
+
+    $response->assertUnprocessable()->assertInvalid($invalidFields);
+    $this->assertDatabaseCount('workspaces', 0);
+    $this->assertDatabaseCount('workspace_memberships', 0);
+})->with([
+    'missing both fields' => [[], ['name', 'kind']],
+    'missing name' => [['kind' => 'team'], ['name']],
+    'missing kind' => [['name' => 'Product team'], ['kind']],
+    'non-string name' => [['name' => 123, 'kind' => 'team'], ['name']],
+    'name exceeds maximum length' => [['name' => str_repeat('a', 256), 'kind' => 'team'], ['name']],
+    'unsupported kind' => [['name' => 'Product team', 'kind' => 'enterprise'], ['kind']],
+]);
+
 test('workspace details return 401 JSON without Basic credentials even when HTML is requested', function () {
     $workspace = WorkspaceFactory::new()->create();
 

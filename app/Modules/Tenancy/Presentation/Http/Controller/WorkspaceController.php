@@ -7,9 +7,12 @@ namespace App\Modules\Tenancy\Presentation\Http\Controller;
 use App\Modules\Identity\Infrastructure\Eloquent\User;
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
+use App\Modules\Tenancy\Presentation\Http\Requests\StoreWorkspaceRequest;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceDetailResource;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
+
 use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 
@@ -20,20 +23,44 @@ class WorkspaceController extends Controller
 {
     /**
      * Возвращает доступные пространства текущего пользователя
+     *
+     * @param User                         $user
+     * @param WorkspaceRepositoryInterface $repository
+     *
+     * @return AnonymousResourceCollection
      */
     public function index(
         #[CurrentUser] User $user,
-        WorkspaceRepositoryInterface $workspaces
+        WorkspaceRepositoryInterface $repository
     ): AnonymousResourceCollection {
         return WorkspaceResource::collection(
-            $workspaces->accessibleToUser($user->id)
+            $repository->accessibleToUser($user->id)
         );
     }
 
     /**
-     * Заготовка создания пространства
+     * Создание нового пространства проектов
+     *
+     * @param StoreWorkspaceRequest        $request
+     * @param User                         $user
+     * @param WorkspaceRepositoryInterface $repository
+     *
+     * @return JsonResponse
      */
-    public function store() {}
+    public function store(
+        StoreWorkspaceRequest $request,
+        #[CurrentUser] User $user,
+        WorkspaceRepositoryInterface $repository
+    ): JsonResponse {
+        $workspace = $repository->createForUser(
+            data: $request->toData(),
+            userId: $user->id
+        );
+
+        return (new WorkspaceDetailResource($workspace))
+            ->response()
+            ->setStatusCode(201);
+    }
 
     /**
      * Детальная информация по пространству
@@ -50,10 +77,14 @@ class WorkspaceController extends Controller
     /**
      * Заготовка изменения пространства
      */
-    public function update() {}
+    public function update()
+    {
+    }
 
     /**
      * Заготовка удаления пространства
      */
-    public function destroy() {}
+    public function destroy()
+    {
+    }
 }

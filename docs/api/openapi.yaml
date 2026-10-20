@@ -90,6 +90,94 @@ paths:
               example:
                 message: Too many failed authentication attempts.
                 retry_after: 10800
+    post:
+      tags:
+        - Workspaces
+      operationId: createWorkspace
+      summary: Create a workspace
+      description: |
+        Creates a workspace and adds the authenticated user as its first member.
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+            example:
+              name: Product team
+              kind: team
+      responses:
+        '201':
+          description: Workspace created. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The create authorization check denied the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '422':
+          description: The request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: The name field is required.
+                errors:
+                  name:
+                    - The name field is required.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
   /api/v1/workspaces/{workspace}:
     get:
       tags:
@@ -179,6 +267,21 @@ components:
       scheme: basic
       description: Use the user's email as the username.
   schemas:
+    CreateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
     Workspace:
       type: object
       additionalProperties: false
@@ -250,6 +353,21 @@ components:
       properties:
         message:
           type: string
+    ValidationError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
     AuthenticationRateLimitError:
       type: object
       additionalProperties: false
