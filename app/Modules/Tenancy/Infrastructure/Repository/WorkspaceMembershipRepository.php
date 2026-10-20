@@ -8,12 +8,17 @@ use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceMembershipRepo
 use App\Modules\Tenancy\Infrastructure\Eloquent\WorkspaceMembership;
 
 /**
- * Хранилище участников пространства проектов
+ * Репозиторий участников пространства
  */
 class WorkspaceMembershipRepository implements WorkspaceMembershipRepositoryInterface
 {
     /**
-     * Проверяет наличие пользователя в пространстве проектов
+     * Проверяет участие пользователя в пространстве
+     *
+     * @param int    $userId
+     * @param string $workspaceId
+     *
+     * @return bool
      */
     public function exists(int $userId, string $workspaceId): bool
     {

@@ -15,8 +15,7 @@ use Illuminate\Support\Collection;
 class WorkspaceRepository implements WorkspaceRepositoryInterface
 {
     /**
-     * Возвращает все доступные пространства проектов для пользователя
-     *
+     * Возвращает доступные пространства пользователя
      *
      * @return Collection<int, Workspace>
      */

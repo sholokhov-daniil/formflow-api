@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика проекта
+ *
  * @extends Factory<Project>
  */
 #[UseModel(Project::class)]
 class ProjectFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные проекта
      *
      * @return array<string, mixed>
      */

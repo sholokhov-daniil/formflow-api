@@ -14,6 +14,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
+ * Пользователь приложения
+ *
  * @property int $id
  * @property string $email
  * @property string $name
@@ -32,8 +34,6 @@ final class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array

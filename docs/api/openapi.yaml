@@ -20,6 +20,13 @@ paths:
 
         Authenticate using HTTP Basic authentication with the user's email as
         the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+        Requests during the block, including requests with valid credentials,
+        return 429 without extending the block. Successful authentication before
+        a block resets the failure count, even if authorization returns 403.
       security:
         - basicAuth: []
       responses:
@@ -66,6 +73,23 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 message: This action is unauthorized.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
 components:
   securitySchemes:
     basicAuth:
@@ -110,3 +134,16 @@ components:
       properties:
         message:
           type: string
+    AuthenticationRateLimitError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - retry_after
+      properties:
+        message:
+          type: string
+        retry_after:
+          type: integer
+          minimum: 1
+          description: Seconds remaining until the authentication block expires.

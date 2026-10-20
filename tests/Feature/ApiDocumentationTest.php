@@ -98,6 +98,30 @@ test('the documented 403 response matches a denied viewAny ability', function ()
     $response->assertForbidden()->assertExactJson($example);
 });
 
+test('the documented 429 response matches the authentication block body and Retry-After header', function () {
+    $this->freezeTime();
+    $specification = Yaml::parseFile(base_path('docs/api/openapi.yaml'));
+    $path = '/'.Route::getRoutes()->getByName('workspaces.index')->uri();
+    $contract = $specification['paths'][$path]['get']['responses']['429'];
+    $schemaName = basename($contract['content']['application/json']['schema']['$ref']);
+    $schema = $specification['components']['schemas'][$schemaName];
+    $this->withBasicAuth('unknown@example.test', 'incorrect-password');
+    $this->getJson($path)->assertUnauthorized();
+    $this->getJson($path)->assertUnauthorized();
+
+    $response = $this->getJson($path);
+
+    $response->assertTooManyRequests()
+        ->assertHeader('Retry-After', (string) $contract['headers']['Retry-After']['example'])
+        ->assertExactJson($contract['content']['application/json']['example']);
+    expect(array_keys($response->json()))->toEqualCanonicalizing($schema['required']);
+    expect(array_keys($response->json()))->toEqualCanonicalizing(array_keys($schema['properties']));
+    expect($schema['additionalProperties'])->toBeFalse();
+    expect($response->json('message'))->toBeString();
+    expect($response->json('retry_after'))->toBeInt()->toBeGreaterThanOrEqual($schema['properties']['retry_after']['minimum']);
+    expect((int) $response->headers->get('Retry-After'))->toBe($response->json('retry_after'));
+});
+
 test('the documented workspace schema matches the public resource fields and supported kinds', function (string $kind) {
     $specification = Yaml::parseFile(base_path('docs/api/openapi.yaml'));
     $schema = $specification['components']['schemas']['Workspace'];
@@ -129,6 +153,7 @@ test('the OpenAPI response references resolve to the documented workspace and er
     expect($responses['200']['content']['application/json']['schema']['$ref'])->toBe('#/components/schemas/WorkspaceList');
     expect($responses['401']['content']['application/json']['schema']['$ref'])->toBe('#/components/schemas/Error');
     expect($responses['403']['content']['application/json']['schema']['$ref'])->toBe('#/components/schemas/Error');
+    expect($responses['429']['content']['application/json']['schema']['$ref'])->toBe('#/components/schemas/AuthenticationRateLimitError');
     expect($specification['components']['schemas']['WorkspaceList'])->toMatchArray([
         'type' => 'object',
         'additionalProperties' => false,

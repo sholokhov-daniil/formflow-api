@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика ответа на поле формы
+ *
  * @extends Factory<SubmissionValue>
  */
 #[UseModel(SubmissionValue::class)]
 class SubmissionValueFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные ответа на поле формы
      *
      * @return array<string, mixed>
      */
@@ -30,6 +32,9 @@ class SubmissionValueFactory extends Factory
         ];
     }
 
+    /**
+     * Привязывает ответ к заполнению формы
+     */
     public function forSubmission(Submission $submission): static
     {
         return $this->state([

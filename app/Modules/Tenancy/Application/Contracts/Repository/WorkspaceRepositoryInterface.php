@@ -8,13 +8,12 @@ use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 use Illuminate\Support\Collection;
 
 /**
- * Репозиторий участников пространства проектов
+ * Репозиторий пространств проектов
  */
 interface WorkspaceRepositoryInterface
 {
     /**
-     * Возвращает все доступные пространства проектов для пользователя
-     *
+     * Возвращает доступные пространства пользователя
      *
      * @return Collection<int, Workspace>
      */

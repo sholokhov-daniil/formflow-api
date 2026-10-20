@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика участника пространства
+ *
  * @extends Factory<WorkspaceMembership>
  */
 #[UseModel(WorkspaceMembership::class)]
 class WorkspaceMembershipFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные участника пространства
      *
      * @return array<string, mixed>
      */

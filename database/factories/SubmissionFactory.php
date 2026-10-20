@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика заполнения формы
+ *
  * @extends Factory<Submission>
  */
 #[UseModel(Submission::class)]
 class SubmissionFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные заполнения формы
      *
      * @return array<string, mixed>
      */

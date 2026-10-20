@@ -4,32 +4,30 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Infrastructure\Repository;
 
-use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceRepositoryInterface;
+use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
 
 /**
- * Репозиторий пространств проектов
+ * Репозиторий пространств с кешированием
  */
 final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInterface
 {
     public const string WORKSPACE_VERSION_KEY = 'tenancy:workspaces:version:v1';
+
     private const int CACHE_TTL = 600;
 
     public function __construct(
         protected WorkspaceRepositoryInterface $repository,
         protected CacheRepository $cache
-    )
-    {
-    }
+    ) {}
 
     /**
-     * Возвращает все доступные пространства проектов для пользователя
-     *
+     * Возвращает доступные пространства пользователя
      *
      * @return Collection<int, Workspace>
      */
@@ -45,8 +43,7 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
             fn (): array => $this->repository
                 ->accessibleToUser($userId)
                 ->map(
-                    static fn (Workspace $workspace): array =>
-                    $workspace->getAttributes(),
+                    static fn (Workspace $workspace): array => $workspace->getAttributes(),
                 )
                 ->all(),
         );
@@ -55,7 +52,7 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
     }
 
     /**
-     * Возвращает ключ кеша по ID пользователя
+     * Возвращает ключ версии кеша пользователя
      *
      * @param int $userId
      *
@@ -67,7 +64,7 @@ final readonly class CachedWorkspaceRepository implements WorkspaceRepositoryInt
     }
 
     /**
-     * Создание ключа кеша, для определенного пользователя
+     * Возвращает ключ списка с учётом версий кеша
      *
      * @param int $userId
      *

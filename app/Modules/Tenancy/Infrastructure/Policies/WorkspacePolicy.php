@@ -9,7 +9,7 @@ use App\Modules\Tenancy\Application\Contracts\Repository\WorkspaceMembershipRepo
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 
 /**
- * Политика прав доступа к пространству форм
+ * Права доступа к пространству
  */
 readonly class WorkspacePolicy
 {
@@ -18,7 +18,11 @@ readonly class WorkspacePolicy
     ) {}
 
     /**
-     * Пользователь может запросить список доступных пространств
+     * Разрешает запрос списка пространств
+     *
+     * @param User $user
+     *
+     * @return bool
      */
     public function viewAny(User $user): bool
     {
@@ -26,7 +30,11 @@ readonly class WorkspacePolicy
     }
 
     /**
-     * Проверка, что пользователь может создать пространство проектов
+     * Разрешает создание пространства
+     *
+     * @param User $user
+     *
+     * @return bool
      */
     public function create(User $user): bool
     {
@@ -34,7 +42,12 @@ readonly class WorkspacePolicy
     }
 
     /**
-     * Проверка, что пользователь может посмотреть пространство групп
+     * Проверяет доступ к просмотру пространства
+     *
+     * @param User      $user
+     * @param Workspace $workspace
+     *
+     * @return bool
      */
     public function view(User $user, Workspace $workspace): bool
     {
@@ -42,7 +55,12 @@ readonly class WorkspacePolicy
     }
 
     /**
-     * Проверка, что пользовать может обновить пространства групп
+     * Проверяет доступ к изменению пространства
+     *
+     * @param User      $user
+     * @param Workspace $workspace
+     *
+     * @return bool
      */
     public function update(User $user, Workspace $workspace): bool
     {
@@ -50,7 +68,12 @@ readonly class WorkspacePolicy
     }
 
     /**
-     * Проверка, что пользователь может удалить пространство групп
+     * Проверяет доступ к удалению пространства
+     *
+     * @param User      $user
+     * @param Workspace $workspace
+     *
+     * @return bool
      */
     public function delete(User $user, Workspace $workspace): bool
     {
@@ -58,7 +81,12 @@ readonly class WorkspacePolicy
     }
 
     /**
-     * Проверяет, что пользователь является членом пространства групп
+     * Проверяет участие пользователя в пространстве
+     *
+     * @param User      $user
+     * @param Workspace $workspace
+     *
+     * @return bool
      */
     private function isMember(User $user, Workspace $workspace): bool
     {

@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @final
- * @property string   $id
- * @property string   $name
- * @property string   $kind
+ * Пространство проектов
+ *
+ * @property string $id
+ * @property string $name
+ * @property string $kind
  * @property DateTime $create_at
  * @property DateTime $updated_at
  */

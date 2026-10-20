@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\FormDefinition\Infrastructure\Eloquent;
 
 use DateTime;
+
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * Форма проекта
+ *
  * @final
  *
  * @property string $id
@@ -26,6 +29,9 @@ class Form extends Model
 {
     use HasUuids;
 
+    /**
+     * @return string[]
+     */
     protected function casts(): array
     {
         return [

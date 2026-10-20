@@ -44,6 +44,9 @@ expect()->extend('toBeOne', function () {
 |
 */
 
+/**
+ * Заготовка вспомогательной функции
+ */
 function something()
 {
     // ..

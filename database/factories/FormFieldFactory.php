@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика поля формы
+ *
  * @extends Factory<FormField>
  */
 #[UseModel(FormField::class)]
 class FormFieldFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные поля формы
      *
      * @return array<string, mixed>
      */
