@@ -6,12 +6,15 @@ use App\Modules\Identity\Infrastructure\Eloquent\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+/**
+ * Начальные данные приложения
+ */
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Создаёт тестового пользователя
      */
     public function run(): void
     {

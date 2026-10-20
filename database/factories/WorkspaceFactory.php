@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
+ * Фабрика пространства проектов
+ *
  * @extends Factory<Workspace>
  */
 #[UseModel(Workspace::class)]
 class WorkspaceFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Возвращает данные пространства проектов
      *
      * @return array<string, mixed>
      */
@@ -25,6 +27,9 @@ class WorkspaceFactory extends Factory
         ];
     }
 
+    /**
+     * Задаёт личное пространство
+     */
     public function personal(): static
     {
         return $this->state(['kind' => 'personal']);

@@ -12,16 +12,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
+ * Заполнение формы
+ *
  * @property string $id
  * @property string $form_id
- * @property DateTime $create_at
- * @property DateTime $updated_at
+ * @property DateTime|null $create_at
+ * @property DateTime|null $updated_at
  */
 #[Fillable('form_id', 'created_at', 'updated_at')]
 final class Submission extends Model
 {
     use HasUuids;
 
+    /**
+     * Возвращает форму
+     */
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class, 'form_id', 'id');

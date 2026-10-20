@@ -1,0 +1,701 @@
+openapi: 3.1.0
+info:
+  title: FormFlow API
+  version: 1.0.0
+tags:
+  - name: Workspaces
+    description: Workspaces accessible to the authenticated user.
+paths:
+  /api/v1/workspaces:
+    get:
+      tags:
+        - Workspaces
+      operationId: listWorkspaces
+      summary: List accessible workspaces
+      description: |
+        Returns only workspaces where the authenticated user has a membership.
+        Personal and team workspaces are included. Results are ordered by name
+        and then by UUID, ascending, and are not paginated. Users without
+        memberships receive an empty data array.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+        Requests during the block, including requests with valid credentials,
+        return 429 without extending the block. Successful authentication before
+        a block resets the failure count, even if authorization returns 403.
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: Accessible workspaces, including an empty list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceList'
+              examples:
+                workspaces:
+                  summary: Personal and team workspaces
+                  value:
+                    data:
+                      - id: 019a0000-0000-7000-8000-000000000001
+                        name: Alpha personal
+                        kind: personal
+                      - id: 019a0000-0000-7000-8000-000000000002
+                        name: Beta team
+                        kind: team
+                empty:
+                  summary: User without memberships
+                  value:
+                    data: []
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The viewAny authorization check denied the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+    post:
+      tags:
+        - Workspaces
+      operationId: createWorkspace
+      summary: Create a workspace
+      description: |
+        Creates a workspace and adds the authenticated user as its first member.
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+            example:
+              name: Product team
+              kind: team
+      responses:
+        '201':
+          description: Workspace created. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The create authorization check denied the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '422':
+          description: The request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: The name field is required.
+                errors:
+                  name:
+                    - The name field is required.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+  /api/v1/workspaces/{workspace}:
+    get:
+      tags:
+        - Workspaces
+      operationId: showWorkspace
+      summary: Get workspace details
+      description: |
+        Returns detailed information about a workspace, including creation and
+        update timestamps. The authenticated user must be a workspace member.
+        Authentication and failed-attempt limits are the same as for the
+        workspace list endpoint.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workspace details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Alpha personal
+                  kind: personal
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+    put:
+      tags:
+        - Workspaces
+      operationId: replaceWorkspace
+      summary: Replace workspace details
+      description: |
+        Replaces the workspace's editable properties. Both name and kind are
+        required. Values must be sent in a JSON request body; query parameters
+        and form data are ignored. The authenticated user must be a workspace
+        member.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceWorkspaceRequest'
+            example:
+              name: Product team
+              kind: team
+      responses:
+        '200':
+          description: Workspace updated. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '422':
+          description: The JSON request body failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: The name field is required.
+                errors:
+                  name:
+                    - The name field is required.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+    patch:
+      tags:
+        - Workspaces
+      operationId: patchWorkspace
+      summary: Partially update workspace details
+      description: |
+        Updates one or more editable workspace properties. At least one of name
+        or kind is required. Values must be sent in a JSON request body; query
+        parameters and form data are ignored. The authenticated user must be a
+        workspace member.
+
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWorkspaceRequest'
+            example:
+              name: Product team
+      responses:
+        '200':
+          description: Workspace updated. The response contains its detailed representation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000001
+                  name: Product team
+                  kind: team
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T12:30:00.000000Z'
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '422':
+          description: The JSON request body failed validation, or no editable property was provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: Provide at least one field to update.
+                errors:
+                  name:
+                    - Provide at least one field to update.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+    delete:
+      tags:
+        - Workspaces
+      operationId: deleteWorkspace
+      summary: Delete a workspace
+      description: |
+        Deletes the workspace if the authenticated user is a member. Database
+        foreign keys cascade the deletion to its memberships, projects, forms,
+        form fields, submissions, and submission values.
+        Authenticate using HTTP Basic authentication with the user's email as
+        the username and their password. Use HTTPS outside local development.
+
+        Failed authentication attempts are counted per client IP address and
+        Basic username. The third failure within a three-hour window returns
+        429 and blocks that combination for three hours from that failure.
+      security:
+        - basicAuth: []
+      parameters:
+        - name: workspace
+          in: path
+          required: true
+          description: Workspace UUID.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Workspace and its related records were deleted.
+        '401':
+          description: HTTP Basic credentials are missing or invalid.
+          headers:
+            WWW-Authenticate:
+              description: HTTP authentication scheme required by this endpoint.
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Invalid credentials.
+        '403':
+          description: The authenticated user is not a workspace member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This action is unauthorized.
+        '404':
+          description: The workspace was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: The route or resource was not found.
+        '429':
+          description: Too many failed authentication attempts for this client IP and Basic username.
+          headers:
+            Retry-After:
+              description: Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: Too many failed authentication attempts.
+                retry_after: 10800
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Use the user's email as the username.
+  schemas:
+    CreateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    ReplaceWorkspaceRequest:
+      type: object
+      required:
+        - name
+        - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    PatchWorkspaceRequest:
+      type: object
+      anyOf:
+        - required:
+            - name
+        - required:
+            - kind
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    Workspace:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+    WorkspaceDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+            - personal
+            - team
+        created_at:
+          type: [string, "null"]
+          format: date-time
+        updated_at:
+          type: [string, "null"]
+          format: date-time
+    WorkspaceDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkspaceDetail'
+    WorkspaceList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    Error:
+      type: object
+      description: Standard error response when application debug mode is disabled.
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    AuthenticationRateLimitError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+        - retry_after
+      properties:
+        message:
+          type: string
+        retry_after:
+          type: integer
+          minimum: 1
+          description: Seconds remaining until the authentication block expires.

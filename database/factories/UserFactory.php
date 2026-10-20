@@ -9,18 +9,20 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
+ * Фабрика пользователя
+ *
  * @extends Factory<User>
  */
 #[UseModel(User::class)]
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Пароль фабрики пользователей
      */
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
+     * Возвращает данные пользователя
      *
      * @return array<string, mixed>
      */
@@ -36,7 +38,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Задаёт неподтверждённую почту
      */
     public function unverified(): static
     {

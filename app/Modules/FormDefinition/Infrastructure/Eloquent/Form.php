@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * Форма проекта
+ *
  * @final
  *
  * @property string $id
@@ -18,14 +20,17 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $created_by
  * @property array|null $settings
  * @property bool $active
- * @property DateTime $create_at
- * @property DateTime $update_at
+ * @property DateTime|null $create_at
+ * @property DateTime|null $update_at
  */
 #[Fillable(['project_id', 'name', 'created_by', 'settings', 'active', 'created_at', 'updated_at'])]
 class Form extends Model
 {
     use HasUuids;
 
+    /**
+     * @return string[]
+     */
     protected function casts(): array
     {
         return [
