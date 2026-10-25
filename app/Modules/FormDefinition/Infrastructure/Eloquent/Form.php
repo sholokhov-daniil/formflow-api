@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\FormDefinition\Infrastructure\Eloquent;
 
+use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use DateTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Форма проекта
@@ -37,5 +40,20 @@ class Form extends Model
             'settings' => 'array',
             'active' => 'boolean',
         ];
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id', 'id');
+    }
+
+    public function fields(): HasMany
+    {
+        return $this->hasMany(FormField::class, 'form_id', 'id');
+    }
+
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class, 'form_id', 'id');
     }
 }

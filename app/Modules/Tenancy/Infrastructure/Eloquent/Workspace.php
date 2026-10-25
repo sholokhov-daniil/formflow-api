@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Tenancy\Infrastructure\Eloquent;
 
-use DateTime;
-
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Project;
-
+use DateTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -30,5 +28,10 @@ final class Workspace extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class, 'workspace_id', 'id');
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(WorkspaceMembership::class, 'workspace_id', 'id');
     }
 }

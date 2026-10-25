@@ -7,6 +7,11 @@ tags:
     description: Workspaces accessible to the authenticated user.
   - name: Projects
     description: Projects belonging to a workspace, accessible to its members.
+  - name: Forms
+  - name: Form fields
+  - name: Submissions
+  - name: Submission values
+  - name: Workspace memberships
 paths:
   /api/v1/workspaces:
     get:
@@ -1068,12 +1073,1248 @@ paths:
               example:
                 message: 'Too many failed authentication attempts.'
                 retry_after: 10800
+  /api/v1/workspaces/{workspace}/projects/{project}/forms:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Forms
+      operationId: listForm
+      summary: List Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed. Lists are not paginated,
+        ordered ascending by name, id.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormList'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    post:
+      tags:
+      - Forms
+      operationId: createForm
+      summary: Create Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed. Writable fields are
+        read from the JSON body only; query/form fields and unknown fields are ignored.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormRequest'
+            example:
+              name: Feedback
+              active: true
+              settings: null
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Forms
+      operationId: getForm
+      summary: Get Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    put:
+      tags:
+      - Forms
+      operationId: replaceForm
+      summary: Replace Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed. Writable fields are
+        read from the JSON body only; query/form fields and unknown fields are ignored.
+        Required editable fields must all be supplied.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceFormRequest'
+            example:
+              name: Feedback
+              active: true
+              settings: null
+    patch:
+      tags:
+      - Forms
+      operationId: patchForm
+      summary: Patch Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed. Writable fields are
+        read from the JSON body only; query/form fields and unknown fields are ignored.
+        At least one editable field is required.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchFormRequest'
+            example:
+              name: Feedback
+              active: true
+              settings: null
+    delete:
+      tags:
+      - Forms
+      operationId: deleteForm
+      summary: Delete Form
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. created_by is the authenticated user. settings
+        accepts a JSON object, array or null. Omitting settings preserves it on updates;
+        explicit null clears it. Project IDs cannot be changed.
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Deleted; no response body.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/fields:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Form fields
+      operationId: listFormField
+      summary: List FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed. Lists are not paginated,
+        ordered ascending by position, id.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormFieldList'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    post:
+      tags:
+      - Form fields
+      operationId: createFormField
+      summary: Create FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed. Writable fields are read
+        from the JSON body only; query/form fields and unknown fields are ignored.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormFieldDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormFieldRequest'
+            example:
+              code: email
+              label: Email
+              position: 1
+              type: email
+              active: true
+              required: false
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/fields/{field}:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: field
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Form fields
+      operationId: getFormField
+      summary: Get FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormFieldDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    put:
+      tags:
+      - Form fields
+      operationId: replaceFormField
+      summary: Replace FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed. Writable fields are read
+        from the JSON body only; query/form fields and unknown fields are ignored. Required
+        editable fields must all be supplied.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormFieldDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceFormFieldRequest'
+            example:
+              code: email
+              label: Email
+              position: 1
+              type: email
+              active: true
+              required: false
+    patch:
+      tags:
+      - Form fields
+      operationId: patchFormField
+      summary: Patch FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed. Writable fields are read
+        from the JSON body only; query/form fields and unknown fields are ignored. At
+        least one editable field is required.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormFieldDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchFormFieldRequest'
+            example:
+              code: email
+              label: Email
+              position: 1
+              type: email
+              active: true
+              required: false
+    delete:
+      tags:
+      - Form fields
+      operationId: deleteFormField
+      summary: Delete FormField
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. code is unique within the form; position is
+        a signed 32-bit integer. Form IDs cannot be changed.
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Deleted; no response body.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/submissions:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Submissions
+      operationId: listSubmission
+      summary: List Submission
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Creation accepts an empty JSON body and sets
+        form_id from the route. There is no update operation because submissions have
+        no editable attributes; answers are managed through the values resource. Lists
+        are not paginated, ordered ascending by created_at, id.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionList'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    post:
+      tags:
+      - Submissions
+      operationId: createSubmission
+      summary: Create Submission
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Creation accepts an empty JSON body and sets
+        form_id from the route. There is no update operation because submissions have
+        no editable attributes; answers are managed through the values resource. Writable
+        fields are read from the JSON body only; query/form fields and unknown fields
+        are ignored.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubmissionRequest'
+            example: {}
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/submissions/{submission}:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: submission
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Submissions
+      operationId: getSubmission
+      summary: Get Submission
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Creation accepts an empty JSON body and sets
+        form_id from the route. There is no update operation because submissions have
+        no editable attributes; answers are managed through the values resource.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    delete:
+      tags:
+      - Submissions
+      operationId: deleteSubmission
+      summary: Delete Submission
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Creation accepts an empty JSON body and sets
+        form_id from the route. There is no update operation because submissions have
+        no editable attributes; answers are managed through the values resource.
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Deleted; no response body.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/submissions/{submission}/values:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: submission
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Submission values
+      operationId: listSubmissionValue
+      summary: List SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation. Lists are not paginated, ordered ascending by created_at, id.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionValueList'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    post:
+      tags:
+      - Submission values
+      operationId: createSubmissionValue
+      summary: Create SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation. Writable fields are read from the JSON body only; query/form fields
+        and unknown fields are ignored.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionValueDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubmissionValueRequest'
+            example:
+              form_field_id: 019a0000-0000-7000-8000-000000000001
+              value: null
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/submissions/{submission}/values/{value}:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: submission
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: value
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Submission values
+      operationId: getSubmissionValue
+      summary: Get SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionValueDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    put:
+      tags:
+      - Submission values
+      operationId: replaceSubmissionValue
+      summary: Replace SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation. Writable fields are read from the JSON body only; query/form fields
+        and unknown fields are ignored. Required editable fields must all be supplied.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionValueDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceSubmissionValueRequest'
+            example:
+              value: null
+    patch:
+      tags:
+      - Submission values
+      operationId: patchSubmissionValue
+      summary: Patch SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation. Writable fields are read from the JSON body only; query/form fields
+        and unknown fields are ignored. At least one editable field is required.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionValueDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchSubmissionValueRequest'
+            example:
+              value: null
+    delete:
+      tags:
+      - Submission values
+      operationId: deleteSubmissionValue
+      summary: Delete SubmissionValue
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. form_field_id must belong to the submission
+        form and be unique within the submission. It is immutable after creation. value
+        accepts any JSON value, including null. Submission and form IDs are server-controlled.
+        This CRUD API does not implement submission completion or field-type/required-field
+        validation.
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Deleted; no response body.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+  /api/v1/workspaces/{workspace}/memberships:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workspace memberships
+      operationId: listWorkspaceMembership
+      summary: List WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction. Lists are not paginated, ordered ascending by user_id,
+        id.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipList'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    post:
+      tags:
+      - Workspace memberships
+      operationId: createWorkspaceMembership
+      summary: Create WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction. Writable fields are read from the JSON body only; query/form
+        fields and unknown fields are ignored.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceMembershipRequest'
+            example:
+              user_id: 1
+  /api/v1/workspaces/{workspace}/memberships/{membership}:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: membership
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workspace memberships
+      operationId: getWorkspaceMembership
+      summary: Get WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    put:
+      tags:
+      - Workspace memberships
+      operationId: replaceWorkspaceMembership
+      summary: Replace WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction. Writable fields are read from the JSON body only; query/form
+        fields and unknown fields are ignored. Required editable fields must all be
+        supplied.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceWorkspaceMembershipRequest'
+            example:
+              user_id: 1
+    patch:
+      tags:
+      - Workspace memberships
+      operationId: patchWorkspaceMembership
+      summary: Patch WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction. Writable fields are read from the JSON body only; query/form
+        fields and unknown fields are ignored. At least one editable field is required.
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembershipDetailResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+        '422':
+          $ref: '#/components/responses/InvalidJsonInput'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWorkspaceMembershipRequest'
+            example:
+              user_id: 1
+    delete:
+      tags:
+      - Workspace memberships
+      operationId: deleteWorkspaceMembership
+      summary: Delete WorkspaceMembership
+      description: HTTP Basic authentication uses the user email and password. All operations
+        require membership in the bound workspace; members have the same permissions.
+        Scoped binding returns 404 for any child outside its bound parent, and non-members
+        receive 403 for the correct hierarchy. Failed authentication uses the same three-hour
+        limiter as workspace endpoints. Membership writes invalidate workspace lists
+        after commit. user_id may be replaced; workspace_id is controlled by the route.
+        Deleting your own membership revokes your access; there is no owner role or
+        last-member restriction.
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Deleted; no response body.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
 components:
   securitySchemes:
     basicAuth:
       type: http
       scheme: basic
       description: Use the user's email as the username.
+  responses:
+    BasicUnauthorized:
+      description: HTTP Basic credentials are missing or invalid.
+      headers:
+        WWW-Authenticate:
+          description: HTTP authentication scheme required by this endpoint.
+          schema:
+            type: string
+          example: Basic
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Invalid credentials.
+    WorkspaceAccessDenied:
+      description: Not a workspace member.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ScopedResourceNotFound:
+      description: Resource not found in the bound hierarchy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    AuthenticationLimited:
+      description: Too many failed authentication attempts for this client IP and Basic
+        username.
+      headers:
+        Retry-After:
+          description: Seconds remaining until another authentication attempt is allowed;
+            matches retry_after in the response body.
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          example: 10800
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthenticationRateLimitError'
+          example:
+            message: Too many failed authentication attempts.
+            retry_after: 10800
+    InvalidJsonInput:
+      description: Invalid JSON input.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
   schemas:
     CreateProjectRequest:
       type: object
@@ -1336,3 +2577,620 @@ components:
           type: integer
           minimum: 1
           description: Seconds remaining until the authentication block expires.
+
+    Form:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - project_id
+      - name
+      - settings
+      - active
+      - created_by
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        settings:
+          type:
+          - object
+          - array
+          - 'null'
+        active:
+          type: boolean
+        created_by:
+          type: integer
+    FormDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - project_id
+      - name
+      - settings
+      - active
+      - created_by
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        settings:
+          type:
+          - object
+          - array
+          - 'null'
+        active:
+          type: boolean
+        created_by:
+          type: integer
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    FormDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/FormDetail'
+    FormList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Form'
+    CreateFormRequest:
+      type: object
+      required:
+      - name
+      - active
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        settings:
+          type:
+          - object
+          - array
+          - 'null'
+        active:
+          type: boolean
+    ReplaceFormRequest:
+      type: object
+      required:
+      - name
+      - active
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        settings:
+          type:
+          - object
+          - array
+          - 'null'
+        active:
+          type: boolean
+    PatchFormRequest:
+      type: object
+      required: []
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        settings:
+          type:
+          - object
+          - array
+          - 'null'
+        active:
+          type: boolean
+      anyOf:
+      - required:
+        - name
+      - required:
+        - settings
+      - required:
+        - active
+    FormField:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - form_id
+      - code
+      - label
+      - position
+      - type
+      - active
+      - required
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        label:
+          type: string
+        position:
+          type: integer
+        type:
+          type: string
+          enum:
+          - text
+          - textarea
+          - number
+          - email
+          - phone
+          - boolean
+          - date
+          - datetime
+          - select
+          - file
+        active:
+          type: boolean
+        required:
+          type: boolean
+    FormFieldDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - form_id
+      - code
+      - label
+      - position
+      - type
+      - active
+      - required
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        label:
+          type: string
+        position:
+          type: integer
+        type:
+          type: string
+          enum:
+          - text
+          - textarea
+          - number
+          - email
+          - phone
+          - boolean
+          - date
+          - datetime
+          - select
+          - file
+        active:
+          type: boolean
+        required:
+          type: boolean
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    FormFieldDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/FormFieldDetail'
+    FormFieldList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormField'
+    CreateFormFieldRequest:
+      type: object
+      required:
+      - code
+      - label
+      - position
+      - type
+      - active
+      - required
+      properties:
+        code:
+          type: string
+          maxLength: 100
+        label:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+          minimum: -2147483648
+          maximum: 2147483647
+        type:
+          type: string
+          enum:
+          - text
+          - textarea
+          - number
+          - email
+          - phone
+          - boolean
+          - date
+          - datetime
+          - select
+          - file
+        active:
+          type: boolean
+        required:
+          type: boolean
+    ReplaceFormFieldRequest:
+      type: object
+      required:
+      - code
+      - label
+      - position
+      - type
+      - active
+      - required
+      properties:
+        code:
+          type: string
+          maxLength: 100
+        label:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+          minimum: -2147483648
+          maximum: 2147483647
+        type:
+          type: string
+          enum:
+          - text
+          - textarea
+          - number
+          - email
+          - phone
+          - boolean
+          - date
+          - datetime
+          - select
+          - file
+        active:
+          type: boolean
+        required:
+          type: boolean
+    PatchFormFieldRequest:
+      type: object
+      required: []
+      properties:
+        code:
+          type: string
+          maxLength: 100
+        label:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+          minimum: -2147483648
+          maximum: 2147483647
+        type:
+          type: string
+          enum:
+          - text
+          - textarea
+          - number
+          - email
+          - phone
+          - boolean
+          - date
+          - datetime
+          - select
+          - file
+        active:
+          type: boolean
+        required:
+          type: boolean
+      anyOf:
+      - required:
+        - code
+      - required:
+        - label
+      - required:
+        - position
+      - required:
+        - type
+      - required:
+        - active
+      - required:
+        - required
+    Submission:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - form_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+    SubmissionDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - form_id
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    SubmissionDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/SubmissionDetail'
+    SubmissionList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Submission'
+    CreateSubmissionRequest:
+      type: object
+      required: []
+      properties: {}
+    SubmissionValue:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - submission_id
+      - form_id
+      - form_field_id
+      - value
+      properties:
+        id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        form_field_id:
+          type: string
+          format: uuid
+        value: {}
+    SubmissionValueDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - submission_id
+      - form_id
+      - form_field_id
+      - value
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        form_field_id:
+          type: string
+          format: uuid
+        value: {}
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    SubmissionValueDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/SubmissionValueDetail'
+    SubmissionValueList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubmissionValue'
+    CreateSubmissionValueRequest:
+      type: object
+      required:
+      - form_field_id
+      - value
+      properties:
+        form_field_id:
+          type: string
+          format: uuid
+        value: {}
+    ReplaceSubmissionValueRequest:
+      type: object
+      required:
+      - value
+      properties:
+        value: {}
+    PatchSubmissionValueRequest:
+      type: object
+      required: []
+      properties:
+        value: {}
+      anyOf:
+      - required:
+        - value
+    WorkspaceMembership:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - workspace_id
+      - user_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+    WorkspaceMembershipDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - workspace_id
+      - user_id
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    WorkspaceMembershipDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkspaceMembershipDetail'
+    WorkspaceMembershipList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembership'
+    CreateWorkspaceMembershipRequest:
+      type: object
+      required:
+      - user_id
+      properties:
+        user_id:
+          type: integer
+    ReplaceWorkspaceMembershipRequest:
+      type: object
+      required:
+      - user_id
+      properties:
+        user_id:
+          type: integer
+    PatchWorkspaceMembershipRequest:
+      type: object
+      required: []
+      properties:
+        user_id:
+          type: integer
+      anyOf:
+      - required:
+        - user_id

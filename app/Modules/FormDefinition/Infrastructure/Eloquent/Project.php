@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Проект пространства
@@ -29,5 +30,10 @@ final class Project extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class, 'workspace_id', 'id');
+    }
+
+    public function forms(): HasMany
+    {
+        return $this->hasMany(Form::class, 'project_id', 'id');
     }
 }

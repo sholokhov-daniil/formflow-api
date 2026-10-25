@@ -2,7 +2,11 @@
 
 use App\Modules\Identity\Infrastructure\Eloquent\User;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
+use Database\Factories\FormFactory;
+use Database\Factories\FormFieldFactory;
 use Database\Factories\ProjectFactory;
+use Database\Factories\SubmissionFactory;
+use Database\Factories\SubmissionValueFactory;
 use Database\Factories\UserFactory;
 use Database\Factories\WorkspaceFactory;
 use Database\Factories\WorkspaceMembershipFactory;
@@ -192,4 +196,63 @@ test('the documented project list and detail examples match the authenticated AP
     $detailResponse->assertOk()->assertExactJson($detailExample);
     expect($listOperation['security'])->toBe([['basicAuth' => []]]);
     expect(array_keys($detailResponse->json('data')))->toEqualCanonicalizing($specification['components']['schemas']['ProjectDetail']['required']);
+});
+
+test('nested resource schemas match authenticated list and detail responses', function (string $schema, string $routeName): void {
+    $specification = Yaml::parseFile(base_path('docs/api/openapi.yaml'));
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    $field = FormFieldFactory::new()->for($form)->create();
+    $submission = SubmissionFactory::new()->for($form)->create();
+    $value = SubmissionValueFactory::new()->forSubmission($submission)->create(['form_field_id' => $field->id]);
+    $parameters = ['workspace' => $membership->workspace, 'project' => $project, 'form' => $form, 'field' => $field, 'submission' => $submission, 'value' => $value, 'membership' => $membership];
+    $this->withBasicAuth($membership->user->email, 'password');
+
+    $listResponse = $this->getJson(route($routeName.'.index', $parameters));
+    $detailResponse = $this->getJson(route($routeName.'.show', $parameters));
+
+    $listResponse->assertOk();
+    $detailResponse->assertOk();
+    expect(array_keys($listResponse->json('data.0')))->toEqualCanonicalizing($specification['components']['schemas'][$schema]['required']);
+    expect(array_keys($detailResponse->json('data')))->toEqualCanonicalizing($specification['components']['schemas'][$schema.'Detail']['required']);
+    foreach (['index' => 'get', 'show' => 'get', 'store' => 'post', 'destroy' => 'delete'] as $action => $method) {
+        $path = '/'.Route::getRoutes()->getByName($routeName.'.'.$action)->uri();
+        expect($specification['paths'][$path][$method]['security'])->toBe([['basicAuth' => []]]);
+    }
+})->with([
+    'forms' => ['Form', 'workspaces.projects.forms'],
+    'fields' => ['FormField', 'workspaces.projects.forms.fields'],
+    'submissions' => ['Submission', 'workspaces.projects.forms.submissions'],
+    'values' => ['SubmissionValue', 'workspaces.projects.forms.submissions.values'],
+    'memberships' => ['WorkspaceMembership', 'workspaces.memberships'],
+]);
+
+test('OpenAPI operations are unique and all local references resolve', function (): void {
+    $specification = Yaml::parseFile(base_path('docs/api/openapi.yaml'));
+    $operationIds = [];
+    foreach ($specification['paths'] as $path) {
+        foreach (['get', 'post', 'put', 'patch', 'delete'] as $method) {
+            if (isset($path[$method])) {
+                $operationIds[] = $path[$method]['operationId'];
+            }
+        }
+    }
+
+    expect(array_unique($operationIds))->toHaveCount(count($operationIds));
+    $checkReferences = function (array $node) use (&$checkReferences, $specification): void {
+        foreach ($node as $key => $value) {
+            if ($key === '$ref' && str_starts_with($value, '#/')) {
+                $target = $specification;
+                foreach (explode('/', substr($value, 2)) as $part) {
+                    $part = str_replace(['~1', '~0'], ['/', '~'], $part);
+                    expect($target)->toHaveKey($part);
+                    $target = $target[$part];
+                }
+            } elseif (is_array($value)) {
+                $checkReferences($value);
+            }
+        }
+    };
+    $checkReferences($specification);
 });
