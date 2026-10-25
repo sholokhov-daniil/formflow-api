@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: доступ и кеш"
+  short_description: "Изоляция workspace, membership и кеш FormFlow"

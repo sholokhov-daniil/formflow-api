@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: тестирование"
+  short_description: "Pest, HTTP Basic и транзакции в тестах FormFlow"

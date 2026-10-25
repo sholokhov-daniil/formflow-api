@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\FormDefinition\Infrastructure\Repository;
 
 use App\Modules\FormDefinition\Application\Contracts\Repository\ProjectWorkspaceRepositoryInterface;

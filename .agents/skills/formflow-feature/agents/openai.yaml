@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: разработка функций"
+  short_description: "Модули, DTO и репозитории FormFlow"

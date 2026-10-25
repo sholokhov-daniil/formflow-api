@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: контракт API"
+  short_description: "Маршруты, JSON, Resources и OpenAPI FormFlow"

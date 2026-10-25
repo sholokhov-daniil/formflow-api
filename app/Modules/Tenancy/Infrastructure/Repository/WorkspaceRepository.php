@@ -77,6 +77,11 @@ class WorkspaceRepository implements WorkspaceRepositoryInterface
 
     /**
      * Обновление пространства проектов
+     *
+     * @param Workspace           $workspace
+     * @param UpdateWorkspaceData $data
+     *
+     * @return Workspace
      */
     public function update(Workspace $workspace, UpdateWorkspaceData $data): Workspace
     {
