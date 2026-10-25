@@ -2,6 +2,7 @@
 
 use App\Modules\Identity\Infrastructure\Eloquent\User;
 use App\Modules\Tenancy\Presentation\Http\Resources\WorkspaceResource;
+use Database\Factories\ProjectFactory;
 use Database\Factories\UserFactory;
 use Database\Factories\WorkspaceFactory;
 use Database\Factories\WorkspaceMembershipFactory;
@@ -171,4 +172,24 @@ test('the OpenAPI response references resolve to the documented workspace and er
         'required' => ['message'],
         'properties' => ['message' => ['type' => 'string']],
     ]);
+});
+
+test('the documented project list and detail examples match the authenticated API responses', function (): void {
+    $specification = Yaml::parseFile(base_path('docs/api/openapi.yaml'));
+    $listOperation = $specification['paths']['/api/v1/workspaces/{workspace}/projects']['get'];
+    $detailOperation = $specification['paths']['/api/v1/workspaces/{workspace}/projects/{project}']['get'];
+    $listExample = $listOperation['responses']['200']['content']['application/json']['example'];
+    $detailExample = $detailOperation['responses']['200']['content']['application/json']['example'];
+    $workspace = WorkspaceFactory::new()->create(['id' => $detailExample['data']['workspace_id']]);
+    $membership = WorkspaceMembershipFactory::new()->for($workspace)->create();
+    $project = ProjectFactory::new()->create($detailExample['data']);
+    $this->withBasicAuth($membership->user->email, 'password');
+
+    $listResponse = $this->getJson('/api/v1/workspaces/'.$workspace->id.'/projects');
+    $detailResponse = $this->getJson('/api/v1/workspaces/'.$workspace->id.'/projects/'.$project->id);
+
+    $listResponse->assertOk()->assertExactJson($listExample);
+    $detailResponse->assertOk()->assertExactJson($detailExample);
+    expect($listOperation['security'])->toBe([['basicAuth' => []]]);
+    expect(array_keys($detailResponse->json('data')))->toEqualCanonicalizing($specification['components']['schemas']['ProjectDetail']['required']);
 });

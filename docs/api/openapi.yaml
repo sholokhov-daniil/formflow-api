@@ -5,6 +5,8 @@ info:
 tags:
   - name: Workspaces
     description: Workspaces accessible to the authenticated user.
+  - name: Projects
+    description: Projects belonging to a workspace, accessible to its members.
 paths:
   /api/v1/workspaces:
     get:
@@ -548,6 +550,524 @@ paths:
               example:
                 message: Too many failed authentication attempts.
                 retry_after: 10800
+  '/api/v1/workspaces/{workspace}/projects':
+    parameters:
+      -
+        name: workspace
+        in: path
+        required: true
+        description: 'Workspace UUID.'
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Projects
+      operationId: listProjects
+      summary: 'List workspace projects'
+      description: |-
+        Returns only projects in the requested workspace. The user must be a workspace member. Results are ordered by name and UUID, ascending, without pagination. An empty workspace returns an empty data array.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '200':
+          description: 'List workspace projects.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+              example:
+                data:
+                  -
+                    id: 019a0000-0000-7000-8000-000000000010
+                    workspace_id: 019a0000-0000-7000-8000-000000000001
+                    name: 'Customer feedback'
+                    description: 'Feedback forms'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
+    post:
+      tags:
+        - Projects
+      operationId: createProject
+      summary: 'Create a project'
+      description: |-
+        Creates a project in the workspace from the URL. Both name and description are required, non-empty strings of at most 255 characters. Names must be unique within this workspace; the same name may be used in another workspace. Only JSON body properties are accepted. Extra properties, including id and workspace_id, are ignored. The user must be a workspace member.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '201':
+          description: 'Create a project.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000010
+                  workspace_id: 019a0000-0000-7000-8000-000000000001
+                  name: 'Customer feedback'
+                  description: 'Feedback forms'
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
+        '422':
+          description: 'Invalid JSON body, missing or invalid editable properties, or a duplicate project name in this workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: 'The name field is required.'
+                errors:
+                  name:
+                    - 'The name field is required.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            example:
+              name: 'Customer feedback'
+              description: 'Feedback forms'
+  '/api/v1/workspaces/{workspace}/projects/{project}':
+    parameters:
+      -
+        name: workspace
+        in: path
+        required: true
+        description: 'Workspace UUID.'
+        schema:
+          type: string
+          format: uuid
+      -
+        name: project
+        in: path
+        required: true
+        description: 'Project UUID belonging to this workspace.'
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Projects
+      operationId: showProject
+      summary: 'Get project details'
+      description: |-
+        Returns project details and timestamps. The project must belong to the workspace from the URL, and the user must be a workspace member.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '200':
+          description: 'Get project details.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000010
+                  workspace_id: 019a0000-0000-7000-8000-000000000001
+                  name: 'Customer feedback'
+                  description: 'Feedback forms'
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
+    put:
+      tags:
+        - Projects
+      operationId: replaceProject
+      summary: 'Replace project details'
+      description: |-
+        Replaces both name and description. Both properties are required, non-empty strings of at most 255 characters. The name must be unique within the workspace, excluding this project. Only JSON body properties are accepted; query parameters and form data are ignored. Extra properties are ignored; id and workspace_id cannot be changed. The user must be a workspace member.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '200':
+          description: 'Replace project details.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000010
+                  workspace_id: 019a0000-0000-7000-8000-000000000001
+                  name: 'Customer feedback'
+                  description: 'Feedback forms'
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
+        '422':
+          description: 'Invalid JSON body, missing or invalid editable properties, or a duplicate project name in this workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: 'The name field is required.'
+                errors:
+                  name:
+                    - 'The name field is required.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceProjectRequest'
+            example:
+              name: 'Customer feedback'
+              description: 'Feedback forms'
+    patch:
+      tags:
+        - Projects
+      operationId: patchProject
+      summary: 'Partially update project details'
+      description: |-
+        Updates supplied name and/or description properties, preserving omitted properties. At least one editable property must be provided. Supplied values must be non-empty strings of at most 255 characters; null is not accepted. The name must be unique within the workspace, excluding this project. Only JSON body properties are accepted; query parameters and form data are ignored. Extra properties are ignored; id and workspace_id cannot be changed. The user must be a workspace member.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '200':
+          description: 'Partially update project details.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailResponse'
+              example:
+                data:
+                  id: 019a0000-0000-7000-8000-000000000010
+                  workspace_id: 019a0000-0000-7000-8000-000000000001
+                  name: 'Customer feedback'
+                  description: 'Feedback forms'
+                  created_at: '2026-10-20T10:00:00.000000Z'
+                  updated_at: '2026-10-20T10:00:00.000000Z'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
+        '422':
+          description: 'Invalid JSON body, missing or invalid editable properties, or a duplicate project name in this workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: 'The name field is required.'
+                errors:
+                  name:
+                    - 'The name field is required.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchProjectRequest'
+            example:
+              name: 'Renamed project'
+    delete:
+      tags:
+        - Projects
+      operationId: deleteProject
+      summary: 'Delete a project'
+      description: |-
+        Deletes the project and cascades deletion to its forms, fields, submissions and submission values. The user must be a workspace member. Other projects and the workspace are preserved.
+
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. The third failed authentication attempt within a three-hour window blocks the client IP and Basic username combination for three hours and returns 429.
+      security:
+        -
+          basicAuth: []
+      responses:
+        '204':
+          description: 'Project and its related records were deleted.'
+        '401':
+          description: 'HTTP Basic credentials are missing or invalid.'
+          headers:
+            WWW-Authenticate:
+              description: 'HTTP authentication scheme required by this endpoint.'
+              schema:
+                type: string
+              example: Basic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'Invalid credentials.'
+        '403':
+          description: 'The authenticated user is not a workspace member.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'This action is unauthorized.'
+        '404':
+          description: 'The workspace or project was not found, or the project belongs to a different workspace.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: 'The route or resource was not found.'
+        '429':
+          description: 'Too many failed authentication attempts for this client IP and Basic username.'
+          headers:
+            Retry-After:
+              description: 'Seconds remaining until another authentication attempt is allowed; matches retry_after in the response body.'
+              required: true
+              schema:
+                type: integer
+                minimum: 1
+              example: 10800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationRateLimitError'
+              example:
+                message: 'Too many failed authentication attempts.'
+                retry_after: 10800
 components:
   securitySchemes:
     basicAuth:
@@ -555,6 +1075,123 @@ components:
       scheme: basic
       description: Use the user's email as the username.
   schemas:
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: 'Unique within the workspace.'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+    ReplaceProjectRequest:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: 'Unique within the workspace.'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+    PatchProjectRequest:
+      type: object
+      anyOf:
+        -
+          required:
+            - name
+        -
+          required:
+            - description
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: 'Unique within the workspace.'
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+    Project:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - name
+        - description
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+    ProjectDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - name
+        - description
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    ProjectDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/ProjectDetail'
+    ProjectList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
     CreateWorkspaceRequest:
       type: object
       additionalProperties: false
