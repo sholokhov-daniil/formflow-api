@@ -15,6 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', '')),
+        )));
+        // Prevent Laravel's cloud auto-detection from trusting forwarded headers when unset.
+        $trustedProxies = $trustedProxies === [] ? ['0.0.0.0/32'] : $trustedProxies;
+
+        $middleware->trustProxies(
+            at: $trustedProxies,
+            headers: Request::HEADER_X_FORWARDED_FOR,
+        );
+
         $middleware->redirectGuestsTo(
             fn (Request $request): ?string => $request->is('api', 'api/*')
                 ? null

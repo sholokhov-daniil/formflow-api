@@ -8,6 +8,7 @@ use Database\Factories\FormFieldFactory;
 use Database\Factories\ProjectFactory;
 use Database\Factories\SubmissionFactory;
 use Database\Factories\WorkspaceMembershipFactory;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -289,4 +290,95 @@ test('public token cannot list or read submissions', function (): void {
 
     $this->withToken($token)->getJson('/api/v1/workspaces/'.$membership->workspace_id.'/projects/'.$project->id.'/forms/'.$form->id.'/submissions')->assertUnauthorized();
     $this->withToken($token)->getJson('/api/v1/public/forms/submissions/'.$submission->id)->assertNotFound();
+});
+
+test('public submissions are limited to three per form and IP and resume after the window', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($form)->create(['code' => 'message', 'active' => true]);
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+    $otherForm = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($otherForm)->create(['code' => 'message', 'active' => true]);
+    $otherToken = bin2hex(random_bytes(32));
+    $otherForm->forceFill(['public_token_hash' => hash('sha256', $otherToken)])->save();
+
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+            ->withToken($token)
+            ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Hello']])
+            ->assertCreated();
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+        ->withToken($token)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Blocked']])
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After', '60')
+        ->assertJsonPath('retry_after', 60);
+    $this->assertDatabaseCount('submissions', 3);
+
+    $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2'])
+        ->withToken($token)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Other visitor']])
+        ->assertCreated();
+
+    $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+        ->withToken($otherToken)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Other form']])
+        ->assertCreated();
+
+    $this->travel(60)->seconds();
+    $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+        ->withToken($token)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Window elapsed']])
+        ->assertCreated();
+});
+
+test('untrusted forwarded IP headers do not change the public submission limit key', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($form)->create(['code' => 'message', 'active' => true]);
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+
+    foreach (['198.51.100.1', '198.51.100.2', '198.51.100.3'] as $forwardedIp) {
+        $this->withServerVariables([
+            'REMOTE_ADDR' => '192.0.2.1',
+            'HTTP_X_FORWARDED_FOR' => $forwardedIp,
+        ])->withToken($token)
+            ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Hello']])
+            ->assertCreated();
+    }
+
+    $this->withServerVariables([
+        'REMOTE_ADDR' => '192.0.2.1',
+        'HTTP_X_FORWARDED_FOR' => '198.51.100.4',
+    ])->withToken($token)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Blocked']])
+        ->assertTooManyRequests();
+});
+
+test('public submission limiter storage failures fail closed without creating records', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($form)->create(['code' => 'message', 'active' => true]);
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+
+    $this->mock(RateLimiter::class)
+        ->shouldReceive('tooManyAttempts')
+        ->once()
+        ->andThrow(new RuntimeException('Cache unavailable.'));
+
+    $this->withToken($token)
+        ->postJson('/api/v1/public/forms/submissions', ['values' => ['message' => 'Hello']])
+        ->assertServiceUnavailable()
+        ->assertHeader('Retry-After', '30');
+
+    $this->assertDatabaseCount('submissions', 0);
+    $this->assertDatabaseCount('submission_values', 0);
 });

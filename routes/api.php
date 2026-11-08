@@ -14,6 +14,7 @@ use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use App\Modules\Submissions\Infrastructure\Eloquent\SubmissionValue;
 use App\Modules\Submissions\Presentation\Http\Controller\SubmissionController;
 use App\Modules\Submissions\Presentation\Http\Controller\SubmissionValueController;
+use App\Modules\Submissions\Presentation\Http\Middleware\ThrottlePublicSubmissions;
 use App\Modules\Tenancy\Infrastructure\Eloquent\Workspace;
 use App\Modules\Tenancy\Infrastructure\Eloquent\WorkspaceMembership;
 use App\Modules\Tenancy\Presentation\Http\Controller\WorkspaceController;
@@ -23,7 +24,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::prefix('public/forms')->middleware(ResolvePublicFormToken::class)->group(function (): void {
         Route::get('/schema', [PublicFormController::class, 'schema'])->name('public.forms.schema');
-        Route::post('/submissions', [SubmissionController::class, 'storePublic'])->name('public.forms.submissions.store');
+        Route::post('/submissions', [SubmissionController::class, 'storePublic'])
+            ->middleware(ThrottlePublicSubmissions::class)
+            ->name('public.forms.submissions.store');
     });
 
     Route::scopeBindings()->group(function (): void {
