@@ -7,8 +7,10 @@ namespace App\Modules\Submissions\Presentation\Http\Controller;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Form;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Project;
 use App\Modules\Identity\Infrastructure\Eloquent\User;
+use App\Modules\Submissions\Application\Actions\CreatePublicSubmissionAction;
 use App\Modules\Submissions\Application\Contracts\Repository\SubmissionRepositoryInterface;
 use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
+use App\Modules\Submissions\Presentation\Http\Requests\StorePublicSubmissionRequest;
 use App\Modules\Submissions\Presentation\Http\Requests\StoreSubmissionRequest;
 use App\Modules\Submissions\Presentation\Http\Resources\SubmissionDetailResource;
 use App\Modules\Submissions\Presentation\Http\Resources\SubmissionResource;
@@ -21,6 +23,26 @@ use Illuminate\Routing\Controller;
 
 class SubmissionController extends Controller
 {
+    public function storePublic(
+        StorePublicSubmissionRequest $request,
+        CreatePublicSubmissionAction $createSubmission
+    ): JsonResponse {
+        $form = $request->attributes->get('publicForm');
+
+        if (! $form instanceof Form) {
+            abort(404, 'The public form is unavailable.');
+        }
+
+        $submission = $createSubmission->handle($form->id, $request->values());
+
+        return response()->json([
+            'data' => [
+                'id' => $submission->id,
+                'created_at' => $submission->created_at,
+            ],
+        ], 201);
+    }
+
     public function index(
         #[CurrentUser] User $user,
         Workspace $workspace,

@@ -8,6 +8,7 @@ use App\Modules\Submissions\Application\Contracts\Repository\SubmissionRepositor
 use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final readonly class SubmissionRepository implements SubmissionRepositoryInterface
 {
@@ -26,6 +27,23 @@ final readonly class SubmissionRepository implements SubmissionRepositoryInterfa
         return Submission::create([
             'form_id' => $formId,
         ]);
+    }
+
+    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode): Submission
+    {
+        return DB::transaction(function () use ($formId, $values, $fieldIdsByCode): Submission {
+            $submission = Submission::create(['form_id' => $formId]);
+
+            foreach ($values as $code => $value) {
+                $submission->values()->create([
+                    'form_id' => $formId,
+                    'form_field_id' => $fieldIdsByCode[$code],
+                    'value' => $value,
+                ]);
+            }
+
+            return $submission;
+        });
     }
 
     public function delete(Submission $submission): void

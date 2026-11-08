@@ -14,5 +14,16 @@ interface SubmissionRepositoryInterface
 
     public function createForForm(string $formId): Submission;
 
+    /** Сохраняет публичную отправку и её значения одной транзакцией.
+     *
+     * @param  string  $formId  Идентификатор формы.
+     * @param  array<string, mixed>  $values  Значения по кодам полей.
+     * @param  array<string, string>  $fieldIdsByCode  Соответствие кода поля его ID.
+     * @return Submission Созданная отправка.
+     *
+     * @author Daniil S.
+     */
+    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode): Submission;
+
     public function delete(Submission $submission): void;
 }

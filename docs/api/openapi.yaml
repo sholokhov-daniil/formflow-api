@@ -6,7 +6,7 @@ info:
     The shared authentication-attempt flow is documented in [Identity business flow](../business-logic/identity.md). Endpoint security requirements and HTTP responses are defined below.
 x-planned-contracts:
   - id: public-form-submission
-    status: planned-not-implemented
+    status: partially-implemented
     description: >-
       A revocable public token scoped to one form will allow an external backend
       or SPA to read that form's current public schema and create submissions.
@@ -18,9 +18,10 @@ x-planned-contracts:
       name, email, and message. Stored submissions are available to all members
       of the owning workspace until an operator deletes them. Operators inspect
       submissions manually; no notification or reading-time SLA is promised.
-      Exact paths and request/response schemas are deferred to R02-R03. This
-      extension records target behavior only; no public endpoint is currently
-      exposed.
+      R02 implements token issuance/revocation, the public schema read, and
+      public submission creation. Detailed field validation and version
+      retention remain follow-up work in R03-R05. This extension records the
+      target behavior and implementation boundary.
 tags:
   - name: Workspaces
     description: Workspaces accessible to the authenticated user.
@@ -32,6 +33,139 @@ tags:
   - name: Submission values
   - name: Workspace memberships
 paths:
+  /api/v1/workspaces/{workspace}/projects/{project}/forms/{form}/public-token:
+    parameters:
+    - name: workspace
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: project
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: form
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Forms
+      operationId: issuePublicFormToken
+      summary: Issue or rotate a public form token
+      description: >-
+        HTTP Basic authentication and workspace membership are required. Issuing
+        a token replaces any previous token. The raw 256-bit token is returned
+        once; only its SHA-256 hash is stored. This capability allows reading
+        the form's public schema and creating submissions, never reading them.
+      security:
+      - basicAuth: []
+      responses:
+        '201':
+          description: Token issued. Store the token securely; it will not be returned again.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                pattern: '(^|,\s*)no-store(,|$)'
+              example: 'no-store, private'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicFormTokenResponse'
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+    delete:
+      tags:
+      - Forms
+      operationId: revokePublicFormToken
+      summary: Revoke a public form token
+      security:
+      - basicAuth: []
+      responses:
+        '204':
+          description: Token revoked; revoking a missing token is idempotent.
+        '401':
+          $ref: '#/components/responses/BasicUnauthorized'
+        '403':
+          $ref: '#/components/responses/WorkspaceAccessDenied'
+        '404':
+          $ref: '#/components/responses/ScopedResourceNotFound'
+        '429':
+          $ref: '#/components/responses/AuthenticationLimited'
+  /api/v1/public/forms/schema:
+    get:
+      tags:
+      - Forms
+      operationId: getPublicFormSchema
+      summary: Get the public schema for the token's form
+      description: >-
+        Supply the public capability as a Bearer token. The response contains
+        only the form name and active fields' public attributes. Unknown,
+        revoked, malformed, and inactive-form tokens all return the same 404.
+      security:
+      - publicFormToken: []
+      responses:
+        '200':
+          description: Public form schema.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicFormSchemaResponse'
+        '404':
+          $ref: '#/components/responses/PublicFormUnavailable'
+  /api/v1/public/forms/submissions:
+    post:
+      tags:
+      - Submissions
+      operationId: createPublicSubmission
+      summary: Create a submission for the token's form
+      description: >-
+        Supply the public capability as a Bearer token. Values are keyed by the
+        public field code. Server-controlled parent and ownership identifiers
+        are ignored. Values may only reference active fields; field-specific
+        type, requiredness, and accepted-value rules are defined by follow-up
+        validation work. No public read operation exists for stored submissions.
+      security:
+      - publicFormToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePublicSubmissionRequest'
+            example:
+              values:
+                name: Ada Lovelace
+                email: ada@example.test
+                message: Please contact me.
+      responses:
+        '201':
+          description: Submission and values were saved atomically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSubmissionCreatedResponse'
+        '404':
+          $ref: '#/components/responses/PublicFormUnavailable'
+        '422':
+          description: Values are missing or reference unknown/inactive fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
   /api/v1/workspaces:
     get:
       tags:
@@ -45,8 +179,9 @@ paths:
         memberships receive an empty data array.
 
         Authenticate using HTTP Basic authentication with the user's email as
-        the username and their password. Use HTTPS outside local development. security:
-        - basicAuth: []
+        the username and their password. Use HTTPS outside local development.
+      security:
+      - basicAuth: []
       responses:
         '200':
           description: Accessible workspaces, including an empty list.
@@ -566,9 +701,9 @@ paths:
       description: |-
         Returns only projects in the requested workspace. The user must be a workspace member. Results are ordered by name and UUID, ascending, without pagination. An empty workspace returns an empty data array.
 
-        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development. security:
-        -
-          basicAuth: []
+        Authenticate using HTTP Basic with the user's email and password. Use HTTPS outside local development.
+      security:
+      - basicAuth: []
       responses:
         '200':
           description: 'List workspace projects.'
@@ -2222,7 +2357,22 @@ components:
       type: http
       scheme: basic
       description: Use the user's email as the username.
+    publicFormToken:
+      type: http
+      scheme: bearer
+      bearerFormat: 256-bit hex token
+      description: >-
+        Public capability scoped to one active form. It permits public schema
+        reads and submission creation only. It is not an administrative secret.
   responses:
+    PublicFormUnavailable:
+      description: The public token is invalid, revoked, or belongs to an inactive form.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: The public form is unavailable.
     BasicUnauthorized:
       description: HTTP Basic credentials are missing or invalid.
       headers:
@@ -2275,6 +2425,79 @@ components:
           schema:
             $ref: '#/components/schemas/ValidationError'
   schemas:
+    PublicFormTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [form_id, token]
+          properties:
+            form_id:
+              type: string
+              format: uuid
+            token:
+              type: string
+              pattern: '^[a-f0-9]{64}$'
+              description: Shown once; the server stores only its SHA-256 hash.
+    PublicFormSchemaResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [name, fields]
+          properties:
+            name:
+              type: string
+            fields:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [code, label, position, type, required]
+                properties:
+                  code:
+                    type: string
+                  label:
+                    type: string
+                  position:
+                    type: integer
+                  type:
+                    type: string
+                    enum: [text, textarea, number, boolean, file, email, phone, date, datetime, select]
+                  required:
+                    type: boolean
+    CreatePublicSubmissionRequest:
+      type: object
+      additionalProperties: false
+      required: [values]
+      properties:
+        values:
+          type: object
+          minProperties: 1
+          additionalProperties: true
+          description: Object keyed by active public field code.
+    PublicSubmissionCreatedResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [id, created_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
     CreateProjectRequest:
       type: object
       required:

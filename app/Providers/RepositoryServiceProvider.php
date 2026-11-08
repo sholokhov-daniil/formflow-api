@@ -7,9 +7,11 @@ namespace App\Providers;
 use App\Modules\FormDefinition\Application\Contracts\Repository\FormFieldRepositoryInterface;
 use App\Modules\FormDefinition\Application\Contracts\Repository\FormRepositoryInterface;
 use App\Modules\FormDefinition\Application\Contracts\Repository\ProjectWorkspaceRepositoryInterface;
+use App\Modules\FormDefinition\Application\Contracts\Repository\PublicFormFieldLookupInterface;
 use App\Modules\FormDefinition\Infrastructure\Repository\FormFieldRepository;
 use App\Modules\FormDefinition\Infrastructure\Repository\FormRepository;
 use App\Modules\FormDefinition\Infrastructure\Repository\ProjectWorkspaceRepository;
+use App\Modules\FormDefinition\Infrastructure\Repository\PublicFormFieldRepository;
 use App\Modules\Submissions\Application\Contracts\Repository\SubmissionRepositoryInterface;
 use App\Modules\Submissions\Application\Contracts\Repository\SubmissionValueRepositoryInterface;
 use App\Modules\Submissions\Infrastructure\Repository\SubmissionRepository;
@@ -29,6 +31,7 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         $this->app->bind(FormRepositoryInterface::class, FormRepository::class);
         $this->app->bind(FormFieldRepositoryInterface::class, FormFieldRepository::class);
+        $this->app->bind(PublicFormFieldLookupInterface::class, PublicFormFieldRepository::class);
         $this->app->bind(SubmissionRepositoryInterface::class, SubmissionRepository::class);
         $this->app->bind(SubmissionValueRepositoryInterface::class, SubmissionValueRepository::class);
 

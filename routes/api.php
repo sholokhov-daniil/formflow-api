@@ -6,6 +6,9 @@ use App\Modules\FormDefinition\Infrastructure\Eloquent\Project;
 use App\Modules\FormDefinition\Presentation\Http\Controller\FormController;
 use App\Modules\FormDefinition\Presentation\Http\Controller\FormFieldController;
 use App\Modules\FormDefinition\Presentation\Http\Controller\ProjectController;
+use App\Modules\FormDefinition\Presentation\Http\Controller\PublicFormController;
+use App\Modules\FormDefinition\Presentation\Http\Controller\PublicFormTokenController;
+use App\Modules\FormDefinition\Presentation\Http\Middleware\ResolvePublicFormToken;
 use App\Modules\Identity\Presentation\Http\Middleware\ThrottleAuthenticationFailures;
 use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use App\Modules\Submissions\Infrastructure\Eloquent\SubmissionValue;
@@ -18,12 +21,26 @@ use App\Modules\Tenancy\Presentation\Http\Controller\WorkspaceMembershipControll
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::prefix('public/forms')->middleware(ResolvePublicFormToken::class)->group(function (): void {
+        Route::get('/schema', [PublicFormController::class, 'schema'])->name('public.forms.schema');
+        Route::post('/submissions', [SubmissionController::class, 'storePublic'])->name('public.forms.submissions.store');
+    });
+
+    Route::scopeBindings()->group(function (): void {
+        Route::post('workspaces/{workspace}/projects/{project}/forms/{form}/public-token', [PublicFormTokenController::class, 'store'])
+            ->middleware([ThrottleAuthenticationFailures::class, 'auth.basic', 'can:update,form'])
+            ->name('workspaces.projects.forms.public-token.store');
+        Route::delete('workspaces/{workspace}/projects/{project}/forms/{form}/public-token', [PublicFormTokenController::class, 'destroy'])
+            ->middleware([ThrottleAuthenticationFailures::class, 'auth.basic', 'can:update,form'])
+            ->name('workspaces.projects.forms.public-token.destroy');
+    });
+
     Route::apiResource('workspaces', WorkspaceController::class)
         ->middleware([
             ThrottleAuthenticationFailures::class,
             'auth.basic',
         ])
-        ->middlewareFor('index', 'can:viewAny,' . Workspace::class)
+        ->middlewareFor('index', 'can:viewAny,'.Workspace::class)
         ->middlewareFor('store', 'can:create,'.Workspace::class)
         ->middlewareFor('show', 'can:view,workspace')
         ->middlewareFor('update', 'can:update,workspace')

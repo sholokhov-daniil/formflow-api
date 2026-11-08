@@ -7,6 +7,7 @@ namespace App\Modules\FormDefinition\Infrastructure\Eloquent;
 use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use DateTime;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,10 +24,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $created_by
  * @property array|null $settings
  * @property bool $active
+ * @property string|null $public_token_hash
  * @property DateTime|null $create_at
  * @property DateTime|null $update_at
+ *
+ * @author Daniil S.
  */
 #[Fillable(['project_id', 'name', 'created_by', 'settings', 'active', 'created_at', 'updated_at'])]
+#[Hidden(['public_token_hash'])]
 class Form extends Model
 {
     use HasUuids;
