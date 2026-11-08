@@ -135,9 +135,16 @@ paths:
       description: >-
         Supply the public capability as a Bearer token. Values are keyed by the
         public field code. Server-controlled parent and ownership identifiers
-        are ignored. Values may only reference active fields; field-specific
-        type, requiredness, and accepted-value rules are defined by follow-up
-        validation work. No public read operation exists for stored submissions.
+        are ignored. Values may only reference active fields. Every active
+        required field must be present; optional fields may be omitted. Null,
+        blank strings, unknown/inactive codes, and values that do not match the
+        field type are rejected with field-keyed validation errors. Public
+        values support text, textarea, email, number, and boolean fields. Text
+        values are limited to 10,000 characters; email values must be valid and
+        at most 254 characters. Numbers must be finite JSON numbers and
+        booleans must be JSON booleans. Other field types cannot be submitted.
+        The request accepts at most 100 values and 1 MiB of JSON. Submission
+        and values are written atomically. No public read operation exists.
       security:
       - publicFormToken: []
       requestBody:
@@ -161,7 +168,10 @@ paths:
         '404':
           $ref: '#/components/responses/PublicFormUnavailable'
         '422':
-          description: Values are missing or reference unknown/inactive fields.
+          description: >-
+            The payload, field codes, required values, value types, email format,
+            or configured request/value size limit failed validation. Errors
+            identify the field using values.{code} where possible.
           content:
             application/json:
               schema:
@@ -2474,14 +2484,27 @@ components:
                     type: boolean
     CreatePublicSubmissionRequest:
       type: object
-      additionalProperties: false
+      additionalProperties: true
       required: [values]
       properties:
         values:
           type: object
           minProperties: 1
-          additionalProperties: true
-          description: Object keyed by active public field code.
+          maxProperties: 100
+          additionalProperties:
+            oneOf:
+              - type: string
+                minLength: 1
+                maxLength: 10000
+              - type: number
+              - type: boolean
+          description: >-
+            Object keyed by active public field code. Nulls, blank strings,
+            arrays and nested objects are rejected. String, number and boolean
+            acceptance depends on the field type; text, textarea, email, number
+            and boolean are supported. Email is limited to 254 characters and
+            must pass email format validation. Requiredness is read from each
+            active field definition.
     PublicSubmissionCreatedResponse:
       type: object
       additionalProperties: false

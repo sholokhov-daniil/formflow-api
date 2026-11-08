@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Modules\FormDefinition\Application\Contracts\Repository;
 
+use App\Modules\FormDefinition\Application\DTO\PublicFormFieldDefinition;
+
 /** Публичный прикладной контракт для разрешения кодов активных полей формы.
  *
  * @author Daniil S.
  */
 interface PublicFormFieldLookupInterface
 {
-    /** Возвращает идентификаторы активных полей, принадлежащих указанной форме.
+    /** Возвращает определения активных полей указанной формы.
      *
      * @param  string  $formId  Идентификатор формы.
-     * @param  array<int, string>  $codes  Коды полей из публичного запроса.
-     * @return array<string, string> Соответствие кода поля его идентификатору.
+     * @return array<string, PublicFormFieldDefinition> Соответствие кода его публичному определению.
      *
      * @author Daniil S.
      */
-    public function findActiveIdsByCodes(string $formId, array $codes): array;
+    public function findActiveForForm(string $formId): array;
 }
