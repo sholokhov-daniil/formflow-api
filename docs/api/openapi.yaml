@@ -139,6 +139,8 @@ paths:
         required field must be present; optional fields may be omitted. Null,
         blank strings, unknown/inactive codes, and values that do not match the
         field type are rejected with field-keyed validation errors. Public
+        submissions must include at least one value even when the form has no
+        required fields; an empty values object is rejected. Public
         values support text, textarea, email, number, and boolean fields. Text
         values are limited to 10,000 characters; email values must be valid and
         at most 254 characters. Numbers must be finite JSON numbers and

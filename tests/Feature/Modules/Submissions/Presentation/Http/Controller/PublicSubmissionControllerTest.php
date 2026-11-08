@@ -1,13 +1,16 @@
 <?php
 
 use App\Modules\FormDefinition\Domain\Form\FieldType;
+use App\Modules\Submissions\Application\Contracts\Repository\SubmissionRepositoryInterface;
 use App\Modules\Submissions\Infrastructure\Eloquent\SubmissionValue;
 use Database\Factories\FormFactory;
 use Database\Factories\FormFieldFactory;
 use Database\Factories\ProjectFactory;
 use Database\Factories\SubmissionFactory;
 use Database\Factories\WorkspaceMembershipFactory;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 
 uses(LazilyRefreshDatabase::class);
 
@@ -90,6 +93,28 @@ test('public submission requires every active required field and writes nothing 
     $response->assertUnprocessable()->assertInvalid('values.name');
     $this->assertDatabaseCount('submissions', 0);
     $this->assertDatabaseCount('submission_values', 0);
+});
+
+test('public submission persistence rolls back when a value fails after submission creation', function (): void {
+    Notification::fake();
+
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    $field = FormFieldFactory::new()->for($form)->create(['code' => 'first']);
+
+    expect(fn () => app(SubmissionRepositoryInterface::class)->createPublicForForm(
+        $form->id,
+        ['first' => 'saved before failure', 'second' => 'invalid foreign key'],
+        [
+            'first' => $field->id,
+            'second' => '00000000-0000-7000-8000-000000000000',
+        ],
+    ))->toThrow(QueryException::class);
+
+    $this->assertDatabaseCount('submissions', 0);
+    $this->assertDatabaseCount('submission_values', 0);
+    Notification::assertNothingSent();
 });
 
 test('public submission rejects values that do not match the active field type without writes', function (FieldType $type, mixed $value): void {

@@ -29,28 +29,28 @@ flowchart TD
 
 Диаграммы не добавляют проверок по типу поля или его флагам `active`/`required`: такой путь сейчас не реализован. Формат значений и HTTP-результаты описывает [OpenAPI](../api/openapi.yaml); модели — [архитектурная спецификация](../architecture.md).
 
-## Публичная отправка (R02–R03 реализованы)
+## Публичная отправка (R02–R04 реализованы)
 
 ```mermaid
 flowchart TD
-    Client["Внешний backend или SPA с публичным токеном"] --> Token{"Bearer-токен действителен и форма active?"}
+    Client["Внешний backend или SPA передаёт values по кодам полей"] --> Token{"Bearer-токен действителен и форма active при разрешении запроса?"}
     Token -->|Нет| Denied["Отказать; отправка не создаётся"]
-    Token -->|Да| Schema["Получить актуальную публичную схему формы"]
-    Schema --> Submit["Передать имя, email и сообщение"]
-    Submit --> Resolve["Получить активные определения полей формы"]
+    Token -->|Да| Resolve["Получить активные определения полей формы"]
     Resolve --> Validate{"Коды, обязательность, типы и пределы допустимы?"}
     Validate -->|Ошибка| Invalid["Вернуть ошибку проверки"]
-    Validate -->|Успех| Save["Одной транзакцией сохранить отправку и значения"]
-    Save --> Stored["Отправка доступна участникам workspace"]
+    Validate -->|Успех| Save["В транзакции создать submission и записать все значения"]
+    Save -->|Ошибка любой записи| Rollback["Откатить submission и все значения"]
+    Save -->|Все записи успешны| Commit["Commit; вернуть ID и дату создания"]
+    Commit --> Stored["Отправка доступна участникам workspace"]
     Operator["Участник workspace"] --> Read["Вручную запросить отправки через защищённый API"]
     Stored --> Read
 ```
 
-Публичный Bearer-токен не даёт права читать отправки; такие маршруты остаются только под HTTP Basic и membership. Правила активных полей, типов, ограничений значений и размера запроса описаны в [OpenAPI](../api/openapi.yaml). Отклонённая отправка не создаёт ни submission, ни значений. Историческая привязка к версии схемы остаётся задачей R05. Оператору не обещаются уведомления или срок чтения.
+Публичный Bearer-токен не даёт права читать отправки; такие маршруты остаются только под HTTP Basic и membership. Правила активных полей, типов, ограничений значений и размера запроса описаны в [OpenAPI](../api/openapi.yaml). `values` должен содержать хотя бы одно значение, даже если в форме нет обязательных полей. Активность формы проверяется при разрешении токена в начале запроса; активная схема полей загружается один раз перед проверкой. Изменение схемы после этого чтения влияет на следующие запросы; если поле удалено до записи, ошибка внешнего ключа откатывает всю операцию. Отклонённая отправка не создаёт ни submission, ни значений. Историческая привязка к версии схемы остаётся задачей R05. Оператору не обещаются уведомления или срок чтения.
 
 ## Основания
 
-- [Маршруты](../../routes/api.php), [контроллер submission](../../app/Modules/Submissions/Presentation/Http/Controller/SubmissionController.php), [создание submission](../../app/Modules/Submissions/Presentation/Http/Requests/StoreSubmissionRequest.php).
+- [Маршруты](../../routes/api.php), [middleware публичного токена](../../app/Modules/FormDefinition/Presentation/Http/Middleware/ResolvePublicFormToken.php), [контроллер submission](../../app/Modules/Submissions/Presentation/Http/Controller/SubmissionController.php), [Action публичной отправки](../../app/Modules/Submissions/Application/Actions/CreatePublicSubmissionAction.php), [валидация HTTP-тела](../../app/Modules/Submissions/Presentation/Http/Requests/StorePublicSubmissionRequest.php).
 - [Валидация создания значения](../../app/Modules/Submissions/Presentation/Http/Requests/StoreSubmissionValueRequest.php) и [обновления](../../app/Modules/Submissions/Presentation/Http/Requests/UpdateSubmissionValueRequest.php).
 - [Репозиторий submission](../../app/Modules/Submissions/Infrastructure/Repository/SubmissionRepository.php) и [значений](../../app/Modules/Submissions/Infrastructure/Repository/SubmissionValueRepository.php).
-- [Тесты submission](../../tests/Feature/Modules/Submissions/Presentation/Http/Controller/SubmissionControllerTest.php) и [значений](../../tests/Feature/Modules/Submissions/Presentation/Http/Controller/SubmissionValueControllerTest.php).
+- [Тесты публичной отправки](../../tests/Feature/Modules/Submissions/Presentation/Http/Controller/PublicSubmissionControllerTest.php), [submission](../../tests/Feature/Modules/Submissions/Presentation/Http/Controller/SubmissionControllerTest.php) и [значений](../../tests/Feature/Modules/Submissions/Presentation/Http/Controller/SubmissionValueControllerTest.php).
