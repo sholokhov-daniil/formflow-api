@@ -4,6 +4,23 @@ info:
   version: 1.0.0
   description: |
     The shared authentication-attempt flow is documented in [Identity business flow](../business-logic/identity.md). Endpoint security requirements and HTTP responses are defined below.
+x-planned-contracts:
+  - id: public-form-submission
+    status: planned-not-implemented
+    description: >-
+      A revocable public token scoped to one form will allow an external backend
+      or SPA to read that form's current public schema and create submissions.
+      The token is a public capability, not a secret, and will not permit form
+      administration or reading submissions. Administrative/HTTP Basic
+      credentials must remain on the server. Submission values will be checked
+      against the current field versions; historical submissions retain the
+      field versions used when they were created. The first-version fields are
+      name, email, and message. Stored submissions are available to all members
+      of the owning workspace until an operator deletes them. Operators inspect
+      submissions manually; no notification or reading-time SLA is promised.
+      Exact paths and request/response schemas are deferred to R02-R03. This
+      extension records target behavior only; no public endpoint is currently
+      exposed.
 tags:
   - name: Workspaces
     description: Workspaces accessible to the authenticated user.
