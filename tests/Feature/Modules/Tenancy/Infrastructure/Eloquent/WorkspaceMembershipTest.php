@@ -33,7 +33,10 @@ test('a user cannot join the same workspace twice', function () {
         'workspace_id' => $membership->workspace_id,
     ])))->toThrow(QueryException::class, 'workspace_memberships_user_workspace_unique');
 
-    $this->assertDatabaseCount('workspace_memberships', 1);
+    expect(WorkspaceMembership::query()
+        ->where('user_id', $membership->user_id)
+        ->where('workspace_id', $membership->workspace_id)
+        ->count())->toBe(1);
 });
 
 test('a user can join multiple workspaces', function () {
@@ -46,7 +49,7 @@ test('a user can join multiple workspaces', function () {
 
     $this->assertModelExists($personalMembership);
     $this->assertModelExists($teamMembership);
-    $this->assertDatabaseCount('workspace_memberships', 2);
+    expect(WorkspaceMembership::query()->where('user_id', $user->id)->count())->toBe(2);
 });
 
 test('multiple users can join the same workspace', function () {

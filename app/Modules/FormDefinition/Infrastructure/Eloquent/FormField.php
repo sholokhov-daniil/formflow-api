@@ -27,6 +27,11 @@ final class FormField extends Model
 {
     use HasUuids;
 
+    protected $attributes = [
+        'active' => false,
+        'required' => false,
+    ];
+
     /**
      * Возвращает форму
      */

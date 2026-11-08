@@ -34,7 +34,10 @@ test('workspaces reject unsupported kinds', function () {
         'kind' => 'organization',
     ])))->toThrow(QueryException::class, 'workspaces_kind_check');
 
-    $this->assertDatabaseCount('workspaces', 0);
+    $this->assertDatabaseMissing('workspaces', [
+        'name' => 'Product team',
+        'kind' => 'organization',
+    ]);
 });
 
 test('deleting a workspace removes its memberships and form data while preserving users and other workspaces', function () {

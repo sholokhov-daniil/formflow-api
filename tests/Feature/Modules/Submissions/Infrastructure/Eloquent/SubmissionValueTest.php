@@ -18,6 +18,7 @@ test('submission values round-trip JSON data and resolve the submission form and
         'submission_id' => $submission->id,
         'form_id' => $submission->form_id,
         'form_field_id' => $field->id,
+        'form_field_version_id' => $field->current_version_id,
         'value' => $input,
     ])->refresh();
 
@@ -42,6 +43,20 @@ test('submission values round-trip JSON data and resolve the submission form and
     'object' => [['name' => 'Report', 'count' => 2, 'enabled' => false, 'metadata' => ['source' => 'web']]],
 ]);
 
+test('a submission value cannot be created without a field version', function () {
+    $submission = SubmissionFactory::new()->create();
+    $field = FormFieldFactory::new()->for($submission->form)->create();
+
+    expect(fn () => DB::transaction(fn () => SubmissionValue::query()->create([
+        'submission_id' => $submission->id,
+        'form_id' => $submission->form_id,
+        'form_field_id' => $field->id,
+        'value' => 'Answer without a field version',
+    ])))->toThrow(QueryException::class, 'form_field_version_id');
+
+    $this->assertDatabaseCount('submission_values', 0);
+});
+
 test('a submission cannot contain duplicate values for the same field', function () {
     $value = SubmissionValueFactory::new()->create();
 
@@ -49,6 +64,7 @@ test('a submission cannot contain duplicate values for the same field', function
         'submission_id' => $value->submission_id,
         'form_id' => $value->form_id,
         'form_field_id' => $value->form_field_id,
+        'form_field_version_id' => $value->form_field_version_id,
         'value' => 'Duplicate answer',
     ])))->toThrow(QueryException::class, 'submission_values_submission_id_form_field_id_unique');
 
@@ -77,12 +93,14 @@ test('one submission can contain values for multiple fields', function () {
 
 test('a submission rejects a field belonging to a different form', function () {
     $submission = SubmissionFactory::new()->create();
+    $sameFormField = FormFieldFactory::new()->for($submission->form)->create();
     $foreignField = FormFieldFactory::new()->create();
 
     expect(fn () => DB::transaction(fn () => SubmissionValue::query()->create([
         'submission_id' => $submission->id,
         'form_id' => $submission->form_id,
         'form_field_id' => $foreignField->id,
+        'form_field_version_id' => $sameFormField->current_version_id,
         'value' => 'Invalid answer',
     ])))->toThrow(QueryException::class, 'submission_values_form_field_id_form_id_foreign');
 
@@ -97,6 +115,7 @@ test('a value cannot use a submission belonging to a different form', function (
         'submission_id' => $submission->id,
         'form_id' => $foreignField->form_id,
         'form_field_id' => $foreignField->id,
+        'form_field_version_id' => $foreignField->current_version_id,
         'value' => 'Invalid answer',
     ])))->toThrow(QueryException::class, 'submission_values_submission_id_form_id_foreign');
 
