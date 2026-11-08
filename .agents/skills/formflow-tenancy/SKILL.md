@@ -21,25 +21,24 @@ Inspect these implementations before extending them:
 
 Module paths above are relative to `app/Modules`.
 
-Current workspace access is membership-based. `personal` and `team` are workspace kinds;
-there is no separate owner/admin role in the current policies. Do not infer elevated
-permissions from a kind, creator or guessed role.
+Use [the Tenancy business flow](../../../docs/business-logic/tenancy.md) for the canonical
+access and membership scenario, [OpenAPI](../../../docs/api/openapi.yaml) for endpoint-level
+outcomes, and [architecture](../../../docs/architecture.md) for module boundaries. Keep this
+skill focused on implementation safeguards: enforce both parent-scoped binding and policies,
+derive identity and parent IDs from the authenticated request and route, and preserve typed IDs.
+For membership and workspace writes, check dependent visibility and cache invalidation.
 
-Workspace lists filter by the authenticated user's memberships. Project lists constrain
-both the bound workspace and that user's membership. Preserve these filters even when
-route-level policies also check access. Pass identity from the authenticated request,
-and the parent ID from route binding rather than trusting write payloads.
+## Module boundary and current access decisions
 
-Workspace UUIDs and user integer IDs are different types. Preserve these types in DTOs,
-contracts, cache keys and query parameters.
+For new consumers of Tenancy, expose a public Application contract returning a decision or
+IDs/DTOs without Eloquent models. Existing membership repository consumers and cross-module
+ORM queries are current exceptions; do not copy them into new integrations. Apply
+`formflow-architecture` when changing that boundary and preserve query isolation as well as policies.
 
-For nested resources, maintain both scoped parent-child binding and policy authorization.
-A project under the wrong workspace currently returns 404; an existing project under
-its correct workspace returns 403 for a non-member. Preserve the tested distinctions.
-Ensure `Workspace::projects()` and the nested route agree when extending resource binding.
-
-Workspace creation writes the workspace and initial membership in one transaction.
-For membership mutations, check downstream read visibility and cache invalidation as well as the row being changed.
+Authorization needs a current membership decision. Do not replace it with an asynchronous
+membership projection without an explicitly agreed revocation model. Membership-change events
+may drive independent reactions after commit, but do not replace the access decision itself.
+For a boundary change, cover access after membership revocation and the affected cache lifecycle.
 
 ## Cache changes
 

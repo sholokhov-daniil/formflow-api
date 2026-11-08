@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: архитектура и структура"
+  short_description: "Модули, слои и обоснованные точки расширения"

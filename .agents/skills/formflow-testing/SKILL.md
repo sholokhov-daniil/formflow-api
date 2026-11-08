@@ -45,6 +45,20 @@ cache first, perform the write, then verify the next observable read across comm
 For public schema/example changes, include `tests/Feature/ApiDocumentationTest.php`.
 Keep unrelated test repairs outside the task and never delete existing tests without approval.
 
+## Module contracts and events
+
+For changes to module interactions, apply `formflow-architecture` and select tests for actual
+risks: provider-to-consumer contract compatibility, failure of a required dependency, transaction
+rollback and current access after membership revocation. Public payloads must not expose ORM
+or HTTP objects. Add a focused dependency/architecture check only when it meaningfully prevents
+regression; document existing exceptions instead of claiming complete isolation.
+
+For events, distinguish publication from the observable handler effect: dispatch assertions alone
+do not prove a reaction occurred. When relevant, verify no notification of persisted changes on
+rollback and delivery after a real commit, idempotent repeated handling, retries/failure and the
+ordering guarantees the scenario actually requires. If reliable publication is implemented, cover
+its recovery path. Do not add all these cases for every event regardless of its contract.
+
 ## Run and report
 
 Run the narrowest matching test file or filter from the repository root, for example:

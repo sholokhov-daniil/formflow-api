@@ -1,0 +1,3 @@
+interface:
+  display_name: "FormFlow: бизнес-логика и Mermaid"
+  short_description: "Создание и обновление Mermaid-схем бизнес-логики"

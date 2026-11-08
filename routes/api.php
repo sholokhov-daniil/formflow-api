@@ -23,7 +23,7 @@ Route::prefix('v1')->group(function () {
             ThrottleAuthenticationFailures::class,
             'auth.basic',
         ])
-        ->middlewareFor('index', 'can:viewAny,'.Workspace::class)
+        ->middlewareFor('index', 'can:viewAny,' . Workspace::class)
         ->middlewareFor('store', 'can:create,'.Workspace::class)
         ->middlewareFor('show', 'can:view,workspace')
         ->middlewareFor('update', 'can:update,workspace')

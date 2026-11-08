@@ -6,6 +6,8 @@ description: "Implement FormFlow API features across module layers, DTOs, reposi
 # FormFlow Feature Development
 
 Use this workflow to deliver a complete change within the existing module structure.
+Apply `formflow-architecture` when choosing module boundaries, class locations or extension points;
+see [docs/architecture.md](../../../docs/architecture.md) for the current structure and recommendations.
 Read [AGENTS.md](../../../AGENTS.md) and any matching `.ai/rules` before editing.
 Apply `laravel-best-practices` for the affected PHP concerns.
 
@@ -27,9 +29,24 @@ compare `FormDefinition` when working with nested resources.
 | Authorization | `Infrastructure/Policies` |
 | Domain values | `Domain`, such as `WorkspaceKind` and `FieldType` |
 
-Use paths relative to the selected `app/Modules/<Module>`. Keep existing cross-module
-dependencies unless the requested change needs a different boundary. Do not introduce
-commands, buses, domain entities or extra service layers solely to match a theoretical architecture.
+Use paths relative to the selected `app/Modules/<Module>`. Existing cross-module ORM
+dependencies are documented exceptions, not examples for new integration. Preserve unrelated
+code; replace an exception gradually when the task changes that boundary, with regression coverage.
+Do not introduce commands, buses, domain entities or extra service layers solely to match a theoretical architecture.
+
+## Cross-module operations
+
+Apply `formflow-architecture` for a new or changed module boundary. Use a public Application
+contract for queries requiring current data and actions requiring a result; use events for facts
+and independent reactions. Public payloads use IDs, values and DTOs without ORM or HTTP objects.
+Do not add direct access to another module's tables or concrete repositories.
+
+Specify consistency, the success/transaction boundary and dependency failure behavior before
+choosing synchronous calls or asynchronous reactions. Keep mandatory steps explicit; access
+checks must not silently become dependent on stale membership projections. Notifications of
+persisted changes follow commit. When event loss is unacceptable, use reliable publication such
+as an outbox; select delivery guarantees, retries and idempotency as needed, without speculative infrastructure.
+Frequent mutual calls or shared transactions warrant reviewing the module boundary.
 
 ## Implement the complete path
 

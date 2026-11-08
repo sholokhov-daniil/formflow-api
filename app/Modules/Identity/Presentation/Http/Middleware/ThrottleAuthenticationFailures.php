@@ -19,7 +19,7 @@ final readonly class ThrottleAuthenticationFailures
 {
     public function __construct(
         private AuthenticationAttemptLimiter $limiter,
-        private Closure $keyResolver,
+        private AuthenticationAttemptIdentityResolver $identityResolver,
     ) {}
 
     /**
@@ -32,8 +32,8 @@ final readonly class ThrottleAuthenticationFailures
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $identity = ($this->keyResolver)($request);
-        $key = 'auth:attempts:'.hash('sha256', $identity);
+        $attemptIdentity = $this->identityResolver->resolve($request);
+        $key = 'auth:attempts:'.hash('sha256', $attemptIdentity);
 
         $retryAfter = $this->limiter->retryAfter($key);
 

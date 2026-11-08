@@ -24,7 +24,7 @@ Do not silently rewrite runtime behavior to agree with stale documentation.
 ## Preserve the relevant behavior
 
 - Protected routes currently use `ThrottleAuthenticationFailures` before `auth.basic`, then action-specific `can` middleware. Keep policies active on the actual route; a policy class alone does not protect an endpoint.
-- Basic credentials use the user's email and password. Keep authentication, authorization and rate limiting distinct. The current limiter keys by IP and Basic username; the third failure within three hours starts a three-hour block. A blocked request does not extend that block. Successful authentication before a block resets failures, even if the policy then returns 403. Read the limiter and its tests before changing these rules.
+- Keep authentication, authorization and rate limiting distinct. For the authentication-attempt business flow, use the canonical [Identity diagram](../../../docs/business-logic/identity.md) and its tests instead of restating limiter rules here. This skill owns how each endpoint exposes its authentication requirements and response schemas in OpenAPI.
 - Nested projects use scoped bindings under workspace. Load `formflow-tenancy` for changes to nesting, membership or access checks.
 - Existing write requests validate JSON bodies only. Read `validationData()`, `rules()`, `after()` and `toData()` together. Query strings and form data must not become a back door for write fields.
 - Preserve PUT versus PATCH presence rules. Distinguish an omitted field from an explicitly supplied `null`; inspect the DTO and repository before claiming a nullable field can be cleared. If the desired behavior is unspecified, clarify it instead of choosing a new contract.

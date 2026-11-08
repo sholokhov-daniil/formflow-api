@@ -21,6 +21,9 @@ FormFlow — API для рабочих пространств, проектов,
 
 | Задача | Скилл |
 | --- | --- |
+| Выбор модуля и слоя, размещение классов, зависимости, расширяемость и выделение абстракций | [formflow-architecture](.agents/skills/formflow-architecture/SKILL.md) |
+| Создание и обновление спецификаций; изменения поведения, контрактов, архитектуры или процессов | [project-documentation](.agents/skills/project-documentation/SKILL.md) |
+| Создание и изменение бизнес-сценариев, правил, доступа и бизнес-логики; актуализация блок-схем | [formflow-business-logic](.agents/skills/formflow-business-logic/SKILL.md) |
 | Добавление функции, изменение нескольких слоёв модуля, подключение репозитория | [formflow-feature](.agents/skills/formflow-feature/SKILL.md) |
 | Endpoint, запросы, ресурсы, HTTP-ошибки, OpenAPI | [formflow-api-contract](.agents/skills/formflow-api-contract/SKILL.md) |
 | Доступ к workspace и вложенным сущностям, membership, инвалидирование кеша | [formflow-tenancy](.agents/skills/formflow-tenancy/SKILL.md) |
@@ -32,6 +35,8 @@ FormFlow — API для рабочих пространств, проектов,
 ## Рабочий процесс
 
 - Начинай с `git status --short`, проверяй относящиеся к задаче staged и unstaged изменения. Сохраняй пользовательскую работу; не меняй индекс без запроса на коммит или staging.
+- До исследования или изменения кода прочитай `docs/INDEX.md` и относящиеся к задаче спецификации. Применяй `project-documentation`, чтобы обновлять их вместе с реализацией.
+- При создании или изменении бизнес-сценария обязательно применяй `formflow-business-logic`: обновляй диаграмму в единственном документе-владельце в `docs/business-logic`; не создавай второй текстовый пересказ спецификации. Сверяйся с OpenAPI для HTTP-контракта и с архитектурной спецификацией для технических решений. Общий обзор — навигация, он не дублирует правила сценариев.
 - Прочитай ближайший реализованный пример и его тесты. Не достраивай архитектуру по одному названию каталога.
 - Размещай HTTP-код в `Presentation`, DTO и контракты — в `Application`, Eloquent и реализации репозиториев — в `Infrastructure`, доменные enum — в `Domain`. Текущие контракты могут возвращать Eloquent-модели; не вводи отдельные domain entities без потребности задачи.
 - Проверяй регистрацию зависимостей в `RepositoryServiceProvider`, middleware в `PresentationServiceProvider`, policies и observers в `AppServiceProvider`.
@@ -42,6 +47,9 @@ FormFlow — API для рабочих пространств, проектов,
 
 ## Примеры вызова
 
+- `$project-documentation Создай или обнови спецификацию затронутой функции в docs и добавь её в docs/INDEX.md.`
+- `$formflow-business-logic Создай или обнови Mermaid-схему сценария и согласуй её с общим обзором бизнес-логики в docs/business-logic.`
+- `$formflow-architecture Определи место для нового сценария и необходимые классы без лишних абстракций.`
 - `$formflow-feature Добавь изменение существующей функции с учётом слоёв модуля.`
 - `$formflow-api-contract Синхронизируй OpenAPI с изменением endpoint.`
 - `$formflow-tenancy Исправь устаревший список workspace после изменения membership.`
@@ -87,7 +95,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Documentation Files
 
-- You must only create documentation files if explicitly requested by the user.
+- Maintain project specifications in `docs` as part of implementation using `project-documentation`; create focused specifications when a change needs lasting explanation. Create other documentation files only when explicitly requested by the user.
 
 === boost rules ===
 
