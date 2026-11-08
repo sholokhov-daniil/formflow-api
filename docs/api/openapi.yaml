@@ -19,9 +19,9 @@ x-planned-contracts:
       of the owning workspace until an operator deletes them. Operators inspect
       submissions manually; no notification or reading-time SLA is promised.
       R02 implements token issuance/revocation, the public schema read, and
-      public submission creation. Detailed field validation and version
-      retention remain follow-up work in R03-R05. This extension records the
-      target behavior and implementation boundary.
+      public submission creation. R03 adds field validation; R05 enforces form
+      and field activity and retains immutable field versions with submissions.
+      This extension records the target behavior and implementation boundary.
 tags:
   - name: Workspaces
     description: Workspaces accessible to the authenticated user.
@@ -3224,6 +3224,7 @@ components:
       - submission_id
       - form_id
       - form_field_id
+      - form_field_version_id
       - value
       properties:
         id:
@@ -3238,6 +3239,9 @@ components:
         form_field_id:
           type: string
           format: uuid
+        form_field_version_id:
+          type: string
+          format: uuid
         value: {}
     SubmissionValueDetail:
       type: object
@@ -3247,6 +3251,7 @@ components:
       - submission_id
       - form_id
       - form_field_id
+      - form_field_version_id
       - value
       - created_at
       - updated_at
@@ -3261,6 +3266,9 @@ components:
           type: string
           format: uuid
         form_field_id:
+          type: string
+          format: uuid
+        form_field_version_id:
           type: string
           format: uuid
         value: {}

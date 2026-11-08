@@ -29,15 +29,16 @@ final readonly class SubmissionRepository implements SubmissionRepositoryInterfa
         ]);
     }
 
-    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode): Submission
+    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode, array $fieldVersionIdsByCode): Submission
     {
-        return DB::transaction(function () use ($formId, $values, $fieldIdsByCode): Submission {
+        return DB::transaction(function () use ($formId, $values, $fieldIdsByCode, $fieldVersionIdsByCode): Submission {
             $submission = Submission::create(['form_id' => $formId]);
 
             foreach ($values as $code => $value) {
                 $submission->values()->create([
                     'form_id' => $formId,
                     'form_field_id' => $fieldIdsByCode[$code],
+                    'form_field_version_id' => $fieldVersionIdsByCode[$code],
                     'value' => $value,
                 ]);
             }

@@ -106,7 +106,7 @@ test('SubmissionValue details expose the resource and timestamps', function (): 
     $response = $this->withBasicAuth($actor->user->email, 'password')->getJson($url.'/'.$resource->id);
 
     $response->assertOk()->assertJsonPath('data.id', $resource->id);
-    expect(array_keys($response->json('data')))->toEqualCanonicalizing(['id', 'submission_id', 'form_id', 'form_field_id', 'value', 'created_at', 'updated_at']);
+    expect(array_keys($response->json('data')))->toEqualCanonicalizing(['id', 'submission_id', 'form_id', 'form_field_id', 'form_field_version_id', 'value', 'created_at', 'updated_at']);
 });
 
 test('SubmissionValue creation uses bound parents and ignores server controlled fields', function (): void {

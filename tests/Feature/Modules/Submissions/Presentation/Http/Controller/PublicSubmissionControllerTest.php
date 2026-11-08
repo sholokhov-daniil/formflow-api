@@ -37,6 +37,7 @@ test('public token creates a submission with values addressed by field code', fu
         'submission_id' => $submissionId,
         'form_id' => $form->id,
         'form_field_id' => $name->id,
+        'form_field_version_id' => $name->current_version_id,
         'value' => '"Ada"',
     ]);
     $this->assertDatabaseHas('submission_values', [
@@ -95,6 +96,91 @@ test('public submission requires every active required field and writes nothing 
     $this->assertDatabaseCount('submission_values', 0);
 });
 
+test('public submission skips inactive required fields but rejects them when submitted', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($form)->create(['code' => 'retired', 'active' => false, 'required' => true]);
+    FormFieldFactory::new()->for($form)->create(['code' => 'message', 'active' => true]);
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+
+    $this->withToken($token)->postJson('/api/v1/public/forms/submissions', [
+        'values' => ['message' => 'Hello'],
+    ])->assertCreated();
+
+    $response = $this->withToken($token)->postJson('/api/v1/public/forms/submissions', [
+        'values' => ['message' => 'Hello', 'retired' => 'value'],
+    ]);
+
+    $response->assertUnprocessable()->assertInvalid('values.retired');
+    $this->assertDatabaseCount('submissions', 1);
+});
+
+test('disabling a form after schema retrieval prevents a new public submission', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    FormFieldFactory::new()->for($form)->create(['code' => 'message', 'active' => true]);
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+
+    $this->withToken($token)->getJson('/api/v1/public/forms/schema')->assertOk();
+    $form->update(['active' => false]);
+
+    $this->withToken($token)->postJson('/api/v1/public/forms/submissions', [
+        'values' => ['message' => 'Hello'],
+    ])->assertNotFound();
+    $this->assertDatabaseCount('submissions', 0);
+    $this->assertDatabaseCount('submission_values', 0);
+});
+
+test('field changes and removal preserve the accepted definition and administrative history', function (): void {
+    $membership = WorkspaceMembershipFactory::new()->create();
+    $project = ProjectFactory::new()->for($membership->workspace)->create();
+    $form = FormFactory::new()->for($project)->create();
+    $field = FormFieldFactory::new()->for($form)->create([
+        'code' => 'message',
+        'label' => 'Message',
+        'active' => true,
+    ]);
+    $acceptedVersionId = $field->current_version_id;
+    $token = bin2hex(random_bytes(32));
+    $form->forceFill(['public_token_hash' => hash('sha256', $token)])->save();
+
+    $created = $this->withToken($token)->postJson('/api/v1/public/forms/submissions', [
+        'values' => ['message' => 'Hello'],
+    ])->assertCreated();
+    $submissionId = $created->json('data.id');
+    $value = SubmissionValue::query()->where('submission_id', $submissionId)->firstOrFail();
+
+    $this->withBasicAuth($membership->user->email, 'password')->patchJson(
+        '/api/v1/workspaces/'.$membership->workspace_id.'/projects/'.$project->id.'/forms/'.$form->id.'/fields/'.$field->id,
+        ['code' => 'body', 'label' => 'Request body'],
+    )->assertOk();
+    $this->withBasicAuth($membership->user->email, 'password')->deleteJson(
+        '/api/v1/workspaces/'.$membership->workspace_id.'/projects/'.$project->id.'/forms/'.$form->id.'/fields/'.$field->id,
+    )->assertNoContent();
+
+    $this->assertModelExists($value->fresh());
+    $this->assertDatabaseHas('submission_values', [
+        'id' => $value->id,
+        'form_field_version_id' => $acceptedVersionId,
+        'value' => '"Hello"',
+    ]);
+    $this->assertDatabaseHas('form_field_versions', [
+        'id' => $acceptedVersionId,
+        'code' => 'message',
+        'label' => 'Message',
+    ]);
+    $form->update(['active' => false]);
+
+    $this->withBasicAuth($membership->user->email, 'password')
+        ->getJson('/api/v1/workspaces/'.$membership->workspace_id.'/projects/'.$project->id.'/forms/'.$form->id.'/submissions')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $submissionId);
+});
+
 test('public submission persistence rolls back when a value fails after submission creation', function (): void {
     Notification::fake();
 
@@ -109,6 +195,10 @@ test('public submission persistence rolls back when a value fails after submissi
         [
             'first' => $field->id,
             'second' => '00000000-0000-7000-8000-000000000000',
+        ],
+        [
+            'first' => $field->current_version_id,
+            'second' => '00000000-0000-7000-8000-000000000001',
         ],
     ))->toThrow(QueryException::class);
 

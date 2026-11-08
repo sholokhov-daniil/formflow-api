@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Modules\FormDefinition\Infrastructure\Eloquent\FormField;
 use App\Modules\Submissions\Infrastructure\Eloquent\Submission;
 use App\Modules\Submissions\Infrastructure\Eloquent\SubmissionValue;
 use Illuminate\Database\Eloquent\Factories\Attributes\UseModel;
@@ -28,6 +29,9 @@ class SubmissionValueFactory extends Factory
             'form_field_id' => fn (array $attributes): string => FormFieldFactory::new()->create([
                 'form_id' => $attributes['form_id'],
             ])->id,
+            'form_field_version_id' => fn (array $attributes): string => FormField::query()
+                ->findOrFail($attributes['form_field_id'])
+                ->current_version_id,
             'value' => fake()->sentence(),
         ];
     }

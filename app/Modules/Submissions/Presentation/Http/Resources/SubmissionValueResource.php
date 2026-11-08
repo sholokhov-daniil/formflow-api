@@ -17,6 +17,7 @@ final class SubmissionValueResource extends JsonResource
             'submission_id' => $this->submission_id,
             'form_id' => $this->form_id,
             'form_field_id' => $this->form_field_id,
+            'form_field_version_id' => $this->form_field_version_id,
             'value' => $this->value,
         ];
     }

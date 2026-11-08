@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\FormDefinition\Infrastructure\Eloquent;
 
 use App\Modules\FormDefinition\Domain\Form\FieldType;
-
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -30,12 +29,15 @@ final class FormField extends Model
 
     /**
      * Возвращает форму
-     *
-     * @return BelongsTo
      */
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class, 'form_id', 'id');
+    }
+
+    public function currentVersion(): BelongsTo
+    {
+        return $this->belongsTo(FormFieldVersion::class, 'current_version_id', 'id');
     }
 
     /**

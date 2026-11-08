@@ -6,7 +6,7 @@ namespace App\Modules\Submissions\Infrastructure\Eloquent;
 
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Form;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\FormField;
-
+use App\Modules\FormDefinition\Infrastructure\Eloquent\FormFieldVersion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $form_field_id
  * @property string|int|bool|null $value
  */
-#[Fillable('submission_id', 'form_field_id', 'value', 'form_id')]
+#[Fillable('submission_id', 'form_field_id', 'form_field_version_id', 'value', 'form_id')]
 final class SubmissionValue extends Model
 {
     use HasUuids;
@@ -35,8 +35,6 @@ final class SubmissionValue extends Model
 
     /**
      * Возвращает заполнение формы
-     *
-     * @return BelongsTo
      */
     public function submission(): BelongsTo
     {
@@ -45,8 +43,6 @@ final class SubmissionValue extends Model
 
     /**
      * Возвращает форму
-     *
-     * @return BelongsTo
      */
     public function form(): BelongsTo
     {
@@ -55,11 +51,14 @@ final class SubmissionValue extends Model
 
     /**
      * Возвращает поле формы
-     *
-     * @return BelongsTo
      */
     public function field(): BelongsTo
     {
         return $this->belongsTo(FormField::class, 'form_field_id', 'id');
+    }
+
+    public function fieldVersion(): BelongsTo
+    {
+        return $this->belongsTo(FormFieldVersion::class, 'form_field_version_id', 'id');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Form;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\FormField;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\Project;
+use App\Modules\FormDefinition\Infrastructure\Observers\FormFieldObserver;
 use App\Modules\FormDefinition\Infrastructure\Policies\FormFieldPolicy;
 use App\Modules\FormDefinition\Infrastructure\Policies\FormPolicy;
 use App\Modules\FormDefinition\Infrastructure\Policies\ProjectPolicy;
@@ -37,5 +38,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Workspace::class, WorkspacePolicy::class);
         WorkspaceMembership::observe(WorkspaceMembershipObserver::class);
         Workspace::observe(WorkspaceObserver::class);
+        FormField::observe(FormFieldObserver::class);
     }
 }

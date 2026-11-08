@@ -70,8 +70,12 @@ final readonly class CreatePublicSubmissionAction
             static fn (PublicFormFieldDefinition $definition): string => $definition->id,
             $fieldDefinitions,
         );
+        $fieldVersionIdsByCode = array_map(
+            static fn (PublicFormFieldDefinition $definition): string => $definition->versionId,
+            $fieldDefinitions,
+        );
 
-        return $this->submissions->createPublicForForm($formId, $values, $fieldIdsByCode);
+        return $this->submissions->createPublicForForm($formId, $values, $fieldIdsByCode, $fieldVersionIdsByCode);
     }
 
     /** @param array<string, mixed> $values

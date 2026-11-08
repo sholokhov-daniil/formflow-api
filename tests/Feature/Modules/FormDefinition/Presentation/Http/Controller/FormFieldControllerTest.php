@@ -120,14 +120,37 @@ test('FormField creation uses bound parents and ignores server controlled fields
 
 });
 
-test('FormField deletion removes the requested record and preserves the parent', function (): void {
+test('FormField deletion archives the definition and preserves the parent', function (): void {
     $fixture = createFormFieldControllerFixture();
     extract($fixture);
     $response = $this->withBasicAuth($actor->user->email, 'password')->deleteJson($url.'/'.$resource->id);
 
     $response->assertNoContent();
-    $this->assertModelMissing($resource);
+    expect($resource->fresh()->active)->toBeFalse();
+    $this->assertModelExists($resource);
     $this->assertModelExists($form);
+});
+
+test('FormField updates preserve the previous definition version', function (): void {
+    $fixture = createFormFieldControllerFixture();
+    extract($fixture);
+    $originalVersionId = $resource->current_version_id;
+
+    $this->withBasicAuth($actor->user->email, 'password')->patchJson($url.'/'.$resource->id, [
+        'label' => 'Revised label',
+        'type' => 'email',
+    ])->assertOk();
+
+    $this->assertDatabaseHas('form_field_versions', [
+        'id' => $originalVersionId,
+        'label' => 'Original',
+        'type' => 'text',
+    ]);
+    $this->assertDatabaseHas('form_field_versions', [
+        'id' => $resource->fresh()->current_version_id,
+        'label' => 'Revised label',
+        'type' => 'email',
+    ]);
 });
 
 test('FormField PUT persists editable fields and preserves parents', function (): void {

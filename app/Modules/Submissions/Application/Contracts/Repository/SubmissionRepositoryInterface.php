@@ -19,11 +19,12 @@ interface SubmissionRepositoryInterface
      * @param  string  $formId  Идентификатор формы.
      * @param  array<string, mixed>  $values  Значения по кодам полей.
      * @param  array<string, string>  $fieldIdsByCode  Соответствие кода поля его ID.
+     * @param  array<string, string>  $fieldVersionIdsByCode  Соответствие кода поля принятой версии определения.
      * @return Submission Созданная отправка.
      *
      * @author Daniil S.
      */
-    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode): Submission;
+    public function createPublicForForm(string $formId, array $values, array $fieldIdsByCode, array $fieldVersionIdsByCode): Submission;
 
     public function delete(Submission $submission): void;
 }

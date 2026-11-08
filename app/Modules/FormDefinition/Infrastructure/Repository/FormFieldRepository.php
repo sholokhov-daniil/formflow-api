@@ -10,6 +10,7 @@ use App\Modules\FormDefinition\Application\DTO\UpdateFormFieldData;
 use App\Modules\FormDefinition\Infrastructure\Eloquent\FormField;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final readonly class FormFieldRepository implements FormFieldRepositoryInterface
 {
@@ -25,7 +26,7 @@ final readonly class FormFieldRepository implements FormFieldRepositoryInterface
 
     public function createForForm(CreateFormFieldData $data, string $formId): FormField
     {
-        return FormField::create([
+        return DB::transaction(fn (): FormField => FormField::create([
             'form_id' => $formId,
             'code' => $data->code,
             'label' => $data->label,
@@ -33,42 +34,47 @@ final readonly class FormFieldRepository implements FormFieldRepositoryInterface
             'type' => $data->type,
             'active' => $data->active,
             'required' => $data->required,
-        ]);
+        ]));
     }
 
     public function update(FormField $field, UpdateFormFieldData $data): FormField
     {
-        if ($data->code !== null) {
-            $field->code = $data->code;
-        }
+        return DB::transaction(function () use ($field, $data): FormField {
+            if ($data->code !== null) {
+                $field->code = $data->code;
+            }
 
-        if ($data->label !== null) {
-            $field->label = $data->label;
-        }
+            if ($data->label !== null) {
+                $field->label = $data->label;
+            }
 
-        if ($data->position !== null) {
-            $field->position = $data->position;
-        }
+            if ($data->position !== null) {
+                $field->position = $data->position;
+            }
 
-        if ($data->type !== null) {
-            $field->type = $data->type;
-        }
+            if ($data->type !== null) {
+                $field->type = $data->type;
+            }
 
-        if ($data->active !== null) {
-            $field->active = $data->active;
-        }
+            if ($data->active !== null) {
+                $field->active = $data->active;
+            }
 
-        if ($data->required !== null) {
-            $field->required = $data->required;
-        }
+            if ($data->required !== null) {
+                $field->required = $data->required;
+            }
 
-        $field->save();
+            $field->save();
 
-        return $field;
+            return $field;
+        });
     }
 
     public function delete(FormField $field): void
     {
-        $field->delete();
+        DB::transaction(function () use ($field): void {
+            $field->active = false;
+            $field->save();
+        });
     }
 }

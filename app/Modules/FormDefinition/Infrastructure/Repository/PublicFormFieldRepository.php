@@ -23,10 +23,12 @@ final readonly class PublicFormFieldRepository implements PublicFormFieldLookupI
         return FormField::query()
             ->where('form_id', $formId)
             ->where('active', true)
-            ->get(['id', 'code', 'type', 'required'])
+            ->whereNotNull('current_version_id')
+            ->get(['id', 'current_version_id', 'code', 'type', 'required'])
             ->mapWithKeys(static fn (FormField $field): array => [
                 $field->code => new PublicFormFieldDefinition(
                     id: $field->id,
+                    versionId: $field->current_version_id,
                     code: $field->code,
                     type: $field->type,
                     required: $field->required,

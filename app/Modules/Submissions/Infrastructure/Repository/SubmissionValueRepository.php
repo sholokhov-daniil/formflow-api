@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Submissions\Infrastructure\Repository;
 
+use App\Modules\FormDefinition\Application\Contracts\Repository\CurrentFormFieldVersionLookupInterface;
 use App\Modules\Submissions\Application\Contracts\Repository\SubmissionValueRepositoryInterface;
 use App\Modules\Submissions\Application\DTO\CreateSubmissionValueData;
 use App\Modules\Submissions\Application\DTO\UpdateSubmissionValueData;
@@ -13,6 +14,8 @@ use Illuminate\Support\Collection;
 
 final readonly class SubmissionValueRepository implements SubmissionValueRepositoryInterface
 {
+    public function __construct(private CurrentFormFieldVersionLookupInterface $fieldVersions) {}
+
     public function findBySubmissionForUser(string $submissionId, int $userId): Collection
     {
         return SubmissionValue::query()
@@ -29,6 +32,7 @@ final readonly class SubmissionValueRepository implements SubmissionValueReposit
             'submission_id' => $submissionId,
             'form_id' => $formId,
             'form_field_id' => $data->formFieldId,
+            'form_field_version_id' => $this->fieldVersions->findCurrentVersionId($formId, $data->formFieldId),
             'value' => $data->value,
         ]);
     }
